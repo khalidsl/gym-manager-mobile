@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ImageBackground,
 } from 'react-native'
 import QRCode from 'react-native-qrcode-svg'
 import { Card } from '../components/Card'
@@ -54,7 +55,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ImageBackground
+      source={require('../assets/gym-bg.jpg')}
+      style={styles.backgroundImage}
+      imageStyle={{ opacity: 0.55 }}
+      resizeMode="cover"
+    >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* QR Code Card */}
       <Card style={styles.qrCard}>
         <Text style={styles.qrTitle}>Mon QR Code</Text>
@@ -173,13 +180,18 @@ export default function ProfileScreen() {
         style={styles.signOutButton}
       />
     </ScrollView>
+    </ImageBackground>
   )
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: 'transparent',
   },
   content: {
     padding: Spacing.lg,

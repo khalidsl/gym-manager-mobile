@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ImageBackground,
 } from 'react-native'
 import { Input } from '../components/Input'
 import { Button } from '../components/Button'
@@ -50,11 +51,17 @@ export default function LoginScreen({ navigation }: any) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ImageBackground
+      source={require('../assets/gym-bg.jpg')}
+      style={styles.backgroundImage}
+      imageStyle={{ opacity: 0.80 }}
+      resizeMode="cover"
     >
-      <ScrollView
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
@@ -99,14 +106,19 @@ export default function LoginScreen({ navigation }: any) {
           />
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   )
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+  },
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     flexGrow: 1,

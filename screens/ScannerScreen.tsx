@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, Alert } from 'react-native'
+import { View, Text, StyleSheet, Alert, ImageBackground } from 'react-native'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
@@ -68,7 +68,13 @@ export default function ScannerScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require('../assets/gym-bg.jpg')}
+      style={styles.backgroundImage}
+      imageStyle={{ opacity: 0.15 }}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
       <View style={styles.typeSelector}>
         <Button
           title="Entrée"
@@ -111,13 +117,18 @@ export default function ScannerScreen() {
         </View>
       )}
     </View>
+    </ImageBackground>
   )
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: 'transparent',
   },
   permissionCard: {
     margin: Spacing.lg,

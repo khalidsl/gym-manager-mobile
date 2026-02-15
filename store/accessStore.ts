@@ -94,8 +94,14 @@ export const useAccessStore = create<AccessState>((set, get) => ({
     try {
       const visitors = await accessService.getCurrentVisitors()
       set({ currentVisitors: visitors })
-    } catch (error) {
-      console.error('Fetch Current Visitors Error:', error)
+    } catch (error: any) {
+      console.error('Fetch Current Visitors Error:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        error
+      })
       throw error
     }
   },

@@ -11,10 +11,25 @@ export const getAllMachines = async (): Promise<Machine[]> => {
       .select('*')
       .order('name')
 
-    if (error) throw error
+    if (error) {
+      console.error('getAllMachines - Supabase Error:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        error
+      })
+      throw error
+    }
     return data || []
-  } catch (error) {
-    console.error('Get Machines Error:', error)
+  } catch (error: any) {
+    console.error('Get Machines Error:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      error
+    })
     throw error
   }
 }
@@ -223,6 +238,96 @@ export const getUserSessionHistory = async (limit = 20): Promise<MachineSession[
   } catch (error) {
     console.error('Get Session History Error:', error)
     throw error
+  }
+}
+
+/**
+ * Récupérer l'historique des sessions pour une machine spécifique
+ */
+export const getMachineSessionHistory = async (machineId: string, limit = 10): Promise<MachineSession[]> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    const { data, error } = await supabase
+      .from('machine_sessions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('machine_id', machineId)
+      .not('end_time', 'is', null)
+      .order('start_time', { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+    return data || []
+  } catch (error) {
+    console.error('Get Machine Session History Error:', error)
+    return []
+  }
+}
+
+/**
+ * Calculer les statistiques pour une machine
+ */
+export const getMachineStats = async (machineId: string) => {
+  try {
+    const sessions = await getMachineSessionHistory(machineId, 50)
+    
+    if (sessions.length === 0) {
+      return {
+        totalSessions: 0,
+        totalSets: 0,
+        totalReps: 0,
+        maxWeight: 0,
+        avgWeight: 0,
+        lastSession: null,
+        progression: 'neutral' as 'up' | 'down' | 'neutral'
+      }
+    }
+
+    const totalSessions = sessions.length
+    const totalSets = sessions.reduce((sum, s) => sum + (s.sets || 0), 0)
+    const totalReps = sessions.reduce((sum, s) => sum + (s.reps || 0), 0)
+    const weights = sessions.filter(s => s.weight).map(s => s.weight!)
+    const maxWeight = weights.length > 0 ? Math.max(...weights) : 0
+    const avgWeight = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0
+    const lastSession = sessions[0]
+
+    // Calculer la progression (comparer les 3 dernières avec les 3 précédentes)
+    let progression: 'up' | 'down' | 'neutral' = 'neutral'
+    if (sessions.length >= 6) {
+      const recent = sessions.slice(0, 3).filter(s => s.weight).map(s => s.weight!)
+      const previous = sessions.slice(3, 6).filter(s => s.weight).map(s => s.weight!)
+      
+      if (recent.length > 0 && previous.length > 0) {
+        const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length
+        const previousAvg = previous.reduce((a, b) => a + b, 0) / previous.length
+        
+        if (recentAvg > previousAvg * 1.05) progression = 'up'
+        else if (recentAvg < previousAvg * 0.95) progression = 'down'
+      }
+    }
+
+    return {
+      totalSessions,
+      totalSets,
+      totalReps,
+      maxWeight,
+      avgWeight,
+      lastSession,
+      progression
+    }
+  } catch (error) {
+    console.error('Get Machine Stats Error:', error)
+    return {
+      totalSessions: 0,
+      totalSets: 0,
+      totalReps: 0,
+      maxWeight: 0,
+      avgWeight: 0,
+      lastSession: null,
+      progression: 'neutral' as 'up' | 'down' | 'neutral'
+    }
   }
 }
 

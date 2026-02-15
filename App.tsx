@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { StatusBar } from 'expo-status-bar'
 import { View, Text, StyleSheet } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { useAuthStore } from './store/authStore'
 
 // Screens
@@ -15,25 +16,34 @@ import ScannerScreen from './screens/ScannerScreen'
 import ScheduleScreen from './screens/ScheduleScreen'
 import ProfileScreen from './screens/ProfileScreen'
 
-// Composant pour les icônes
-const TabIcon = ({ name, color }: { name: string; color: string }) => {
-  const icons: { [key: string]: string } = {
-    Dashboard: '🏠',
-    Machines: '💪',
-    Scanner: '📷',
-    Schedule: '📅',
-    Profile: '👤',
-  }
-  
-  return (
-    <Text style={{ fontSize: 24 }}>{icons[name] || '•'}</Text>
-  )
-}
-
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 
-// Error Boundary Component
+// Constants
+const COLORS = {
+  primary: '#6C63FF',
+  inactive: '#999',
+  error: '#dc3545',
+  text: '#6c757d',
+  background: '#f8f9fa',
+}
+
+const TAB_ICONS: { [key: string]: string } = {
+  Dashboard: 'home',
+  Machines: 'fitness-center',
+  Scanner: 'qr-code-scanner',
+  Schedule: 'calendar-today',
+  Profile: 'person',
+}
+
+// Components
+const TabIcon = ({ name, focused }: { name: string; focused: boolean }) => {
+  const iconName = TAB_ICONS[name] || 'circle'
+  const color = focused ? COLORS.primary : COLORS.inactive
+  
+  return <MaterialIcons name={iconName} size={26} color={color} />
+}
+
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean; error: Error | null }
@@ -55,6 +65,7 @@ class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <View style={styles.errorContainer}>
+          <MaterialIcons name="error-outline" size={64} color={COLORS.error} />
           <Text style={styles.errorTitle}>Une erreur s'est produite</Text>
           <Text style={styles.errorText}>
             {this.state.error?.message || 'Erreur inconnue'}
@@ -75,17 +86,21 @@ function TabNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: true,
-        tabBarActiveTintColor: '#6C63FF',
-        tabBarInactiveTintColor: '#6B7280',
-        tabBarIcon: ({ color }) => (
-          <TabIcon name={route.name} color={color} />
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.inactive,
+        tabBarIcon: ({ focused }) => (
+          <TabIcon name={route.name} focused={focused} />
         ),
+        tabBarStyle: styles.tabBar,
       })}
     >
       <Tab.Screen 
         name="Dashboard" 
         component={DashboardScreen}
-        options={{ title: 'Accueil' }}
+        options={{ 
+          title: 'Accueil',
+          headerTransparent: true,
+        }}
       />
       <Tab.Screen 
         name="Machines" 
@@ -116,10 +131,14 @@ export default function App() {
 
   useEffect(() => {
     initialize()
-  }, [])
+  }, [initialize])
 
   if (!initialized) {
-    return null
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Chargement...</Text>
+      </View>
+    )
   }
 
   return (
@@ -142,28 +161,40 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
   },
   errorTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#dc3545',
+    color: COLORS.error,
+    marginTop: 20,
     marginBottom: 10,
   },
   errorText: {
     fontSize: 16,
-    color: '#6c757d',
+    color: COLORS.text,
     textAlign: 'center',
     marginBottom: 20,
   },
   errorHint: {
     fontSize: 14,
-    color: '#6c757d',
+    color: COLORS.text,
     fontStyle: 'italic',
+  },
+  tabBar: {
+    height: 60,
+    paddingBottom: 8,
+    paddingTop: 8,
   },
 })

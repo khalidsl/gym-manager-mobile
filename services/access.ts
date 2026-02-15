@@ -222,7 +222,10 @@ export const getCurrentVisitors = async () => {
       .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .order('timestamp', { ascending: false })
 
-    if (entriesError) throw entriesError
+    if (entriesError) {
+      console.error('getCurrentVisitors - Entries Error:', entriesError.message, entriesError)
+      throw entriesError
+    }
 
     // Récupérer toutes les sorties récentes
     const { data: exits, error: exitsError } = await supabase
@@ -232,7 +235,10 @@ export const getCurrentVisitors = async () => {
       .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .order('timestamp', { ascending: false })
 
-    if (exitsError) throw exitsError
+    if (exitsError) {
+      console.error('getCurrentVisitors - Exits Error:', exitsError.message, exitsError)
+      throw exitsError
+    }
 
     // Filtrer pour ne garder que ceux qui sont entrés sans être sortis
     const visitors = new Map()
@@ -252,8 +258,14 @@ export const getCurrentVisitors = async () => {
     })
 
     return Array.from(visitors.values())
-  } catch (error) {
-    console.error('Get Current Visitors Error:', error)
+  } catch (error: any) {
+    console.error('Get Current Visitors Error:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      error
+    })
     throw error
   }
 }

@@ -38,8 +38,14 @@ export const useMachinesStore = create<MachinesState>((set, get) => ({
       set({ loading: true })
       const machines = await machinesService.getAllMachines()
       set({ machines, loading: false })
-    } catch (error) {
-      console.error('Fetch Machines Error:', error)
+    } catch (error: any) {
+      console.error('Fetch Machines Error:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        error
+      })
       set({ loading: false })
       throw error
     }
