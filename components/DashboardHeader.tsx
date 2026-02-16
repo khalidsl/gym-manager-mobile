@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, StyleSheet, Platform } from 'react-native'
 import { Spacing, FontSize, BorderRadius } from '../constants/Colors'
+import { useThemeContext } from '../contexts/ThemeContext'
 
 interface DashboardHeaderProps {
   userName: string
@@ -11,6 +12,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   userName,
   membershipType
 }) => {
+  const { colors, isDark } = useThemeContext()
   
   // Petit helper pour dynamiser la couleur du badge
   const getBadgeColor = () => {
@@ -25,8 +27,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     <View style={styles.headerContainer}>
       <View style={styles.content}>
         <View>
-          <Text style={styles.greeting}>Tableau de bord</Text>
-          <Text style={styles.name}>{userName}</Text>
+          <Text style={[styles.name, { color: colors.text }]}>{userName}</Text>
         </View>
         
         <View style={[styles.badge, { backgroundColor: getBadgeColor() }]}>
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end', // Alignement sur la ligne de base du nom
+    alignItems: 'center', // Centrage vertical
   },
   greeting: {
     fontSize: FontSize.sm,
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: FontSize.xxl,
     fontWeight: '800',
-    color: '#1E293B', // On utilise un gris très foncé pour la lisibilité
+    // color sera définie dynamiquement avec le thème
   },
   badge: {
     paddingHorizontal: 12,

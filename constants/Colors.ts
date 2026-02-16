@@ -1,36 +1,44 @@
+export const LightTheme = {
+  primary: '#6C63FF',
+  secondary: '#4C51BF',
+  accent: '#10B981',
+  background: '#FFFFFF',
+  surface: '#F8FAFC',
+  card: '#FFFFFF',
+  text: '#1E293B',
+  textSecondary: '#64748B',
+  textTertiary: '#94A3B8',
+  border: '#E2E8F0',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  gradient: ['#6C63FF', '#4C51BF'],
+}
+
+export const DarkTheme = {
+  primary: '#7C3AED',
+  secondary: '#5B21B6',
+  accent: '#10B981',
+  background: '#0F172A',
+  surface: '#1E293B',
+  card: '#334155',
+  text: '#F1F5F9',
+  textSecondary: '#CBD5E1',
+  textTertiary: '#94A3B8',
+  border: '#475569',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  gradient: ['#7C3AED', '#5B21B6'],
+}
+
 export const Colors = {
-  light: {
-    primary: '#6C63FF',
-    secondary: '#FF6584',
-    accent: '#4ECDC4',
-    background: '#F8F9FA',
-    card: '#FFFFFF',
-    text: '#1A1A2E',
-    textSecondary: '#6B7280',
-    border: '#E5E7EB',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    info: '#3B82F6',
-    disabled: '#D1D5DB',
-    placeholder: '#9CA3AF',
-  },
-  dark: {
-    primary: '#6C63FF',
-    secondary: '#FF6584',
-    accent: '#4ECDC4',
-    background: '#0F0E17',
-    card: '#1A1A2E',
-    text: '#FFFFFE',
-    textSecondary: '#A7A9BE',
-    border: '#2E2E3A',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    info: '#3B82F6',
-    disabled: '#4B5563',
-    placeholder: '#6B7280',
-  },
+  light: LightTheme,
+  dark: DarkTheme,
 }
 
 export const Spacing = {
@@ -40,14 +48,6 @@ export const Spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
-}
-
-export const BorderRadius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  full: 9999,
 }
 
 export const FontSize = {
@@ -60,8 +60,18 @@ export const FontSize = {
 }
 
 export const FontWeight = {
-  regular: '400' as const,
-  medium: '500' as const,
-  semibold: '600' as const,
-  bold: '700' as const,
+  normal: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+  extrabold: '800',
+}
+
+export const BorderRadius = {
+  sm: 6,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  xxl: 24,
+  full: 9999,
 }
