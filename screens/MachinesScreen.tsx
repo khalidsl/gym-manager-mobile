@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo } from 'react'
+import React, { useEffect, useState, memo, useRef } from 'react'
 import {
   View,
   Text,
@@ -12,10 +12,12 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Animated,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
 import { MaterialIcons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius } from '../constants/Colors'
@@ -28,15 +30,60 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
 
-// ==================== TIMER COMPONENT (OPTIMISÉ) ====================
+// ==================== TIMER COMPONENT AVEC ANIMATIONS ====================
 const SessionTimer = memo(({ startTime }: { startTime: string }) => {
   const [elapsed, setElapsed] = useState(0)
+  const pulseAnim = useRef(new Animated.Value(1)).current
+  const rotateAnim = useRef(new Animated.Value(0)).current
+  const glowAnim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     const start = new Date(startTime).getTime()
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - start) / 1000))
     }, 1000)
+
+    // Animation de pulse continu
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.15,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start()
+
+    // Animation de rotation lente
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    ).start()
+
+    // Animation de glow
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start()
+
     return () => clearInterval(interval)
   }, [startTime])
 
@@ -47,142 +94,157 @@ const SessionTimer = memo(({ startTime }: { startTime: string }) => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  })
+
+  const glowColor = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(108, 99, 255, 0.3)', 'rgba(108, 99, 255, 0.8)'],
+  })
+
   return (
-    <LinearGradient colors={['#6C63FF', '#4C51BF']} style={styles.timerGradient}>
-      <View style={styles.timerPulse}>
-        <MaterialIcons name="timer" size={28} color="#FFF" />
-      </View>
-      <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
-      <Text style={styles.timerLabel}>Session active</Text>
-    </LinearGradient>
+    <Animated.View style={[styles.timerGradientContainer, { shadowColor: glowColor }]}>
+      <LinearGradient colors={['#6C63FF', '#4C51BF']} style={styles.timerGradient}>
+        <Animated.View style={[styles.timerPulse, { transform: [{ scale: pulseAnim }] }]}>
+          <Animated.View style={{ transform: [{ rotate: spin }] }}>
+            <MaterialIcons name="timer" size={28} color="#FFF" />
+          </Animated.View>
+        </Animated.View>
+        <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
+        <Text style={styles.timerLabel}>Session active</Text>
+      </LinearGradient>
+    </Animated.View>
   )
 })
 
-// ==================== EMPTY STATE COMPONENT ====================
-const EmptyState = () => (
-  <View style={styles.emptyState}>
-    <LinearGradient
-      colors={['rgba(108, 99, 255, 0.1)', 'rgba(76, 81, 191, 0.05)']}
-      style={styles.emptyGradient}
-    >
-      <View style={styles.emptyIconContainer}>
-        <MaterialIcons name="fitness-center" size={64} color="#6C63FF" />
-      </View>
-      <Text style={styles.emptyTitle}>Aucune machine disponible</Text>
-      <Text style={styles.emptySubtitle}>
-        Les machines apparaîtront ici dès qu'elles seront configurées
-      </Text>
-      <TouchableOpacity style={styles.emptyButton}>
-        <MaterialIcons name="refresh" size={20} color="#6C63FF" />
-        <Text style={styles.emptyButtonText}>Actualiser</Text>
-      </TouchableOpacity>
-    </LinearGradient>
-  </View>
-)
-
-// ==================== MAIN COMPONENT ====================
-export default function MachinesScreen() {
-  const {
-    machines,
-    activeSession,
-    fetchMachines,
-    fetchActiveSession,
-    startSession,
-    endSession,
-  } = useMachinesStore()
-  
-  const [refreshing, setRefreshing] = useState(false)
-  const [expandedMachine, setExpandedMachine] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [machineHistory, setMachineHistory] = useState<Record<string, MachineSession[]>>({})
-  const [machineStats, setMachineStats] = useState<Record<string, any>>({})
-  const [loading, setLoading] = useState(true)
+// ==================== EMPTY STATE AVEC ANIMATION ====================
+const EmptyState = () => {
+  const floatAnim = useRef(new Animated.Value(0)).current
+  const fadeAnim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    loadData()
+    // Fade in
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start()
+
+    // Float animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -10,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start()
   }, [])
 
-  const loadData = async () => {
-    try {
-      setLoading(true)
-      await Promise.all([fetchMachines(), fetchActiveSession()])
-    } catch (error) {
-      console.error('Load Error:', error)
-    } finally {
-      setLoading(false)
+  return (
+    <Animated.View style={[styles.emptyState, { opacity: fadeAnim }]}>
+      <LinearGradient
+        colors={['rgba(108, 99, 255, 0.1)', 'rgba(76, 81, 191, 0.05)']}
+        style={styles.emptyGradient}
+      >
+        <Animated.View 
+          style={[
+            styles.emptyIconContainer,
+            { transform: [{ translateY: floatAnim }] }
+          ]}
+        >
+          <MaterialIcons name="fitness-center" size={64} color="#6C63FF" />
+        </Animated.View>
+        <Text style={styles.emptyTitle}>Aucune machine disponible</Text>
+        <Text style={styles.emptySubtitle}>
+          Les machines apparaîtront ici dès qu'elles seront configurées
+        </Text>
+        <TouchableOpacity style={styles.emptyButton}>
+          <MaterialIcons name="refresh" size={20} color="#6C63FF" />
+          <Text style={styles.emptyButtonText}>Actualiser</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    </Animated.View>
+  )
+}
+
+// ==================== ANIMATED MACHINE CARD ====================
+const AnimatedMachineCard = memo(({ 
+  item, 
+  isExpanded, 
+  isActive,
+  onToggle,
+  onStartSession,
+  onEndSession,
+  stats,
+  history,
+  activeSession,
+}: any) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(50)).current
+  const liveBadgeAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    // Fade in au montage
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start()
+
+    // Animation du badge LIVE
+    if (isActive) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(liveBadgeAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(liveBadgeAnim, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start()
     }
-  }
+  }, [isActive])
 
-  const onRefresh = async () => {
-    setRefreshing(true)
-    await loadData()
-    setRefreshing(false)
-  }
-
-  const loadMachineData = async (machineId: string) => {
-    try {
-      const [history, stats] = await Promise.all([
-        machinesService.getMachineSessionHistory(machineId, 5),
-        machinesService.getMachineStats(machineId)
-      ])
-      setMachineHistory(prev => ({ ...prev, [machineId]: history }))
-      setMachineStats(prev => ({ ...prev, [machineId]: stats }))
-    } catch (error) {
-      console.error('Load Machine Data Error:', error)
-    }
-  }
-
-  const toggleMachine = async (machineId: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-    const isExpanding = expandedMachine !== machineId
-    setExpandedMachine(isExpanding ? machineId : null)
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     
-    if (isExpanding && !machineHistory[machineId]) {
-      await loadMachineData(machineId)
-    }
-  }
+    // Animation au tap
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.97,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 3,
+        useNativeDriver: true,
+      }),
+    ]).start()
 
-  const toggleView = (mode: 'grid' | 'list') => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-    setViewMode(mode)
-  }
-
-  const handleStartSession = async (machine: Machine) => {
-    if (activeSession) {
-      Alert.alert('Session active', 'Vous avez déjà une session en cours')
-      return
-    }
-    if (machine.status !== 'available') {
-      Alert.alert('Machine occupée', 'Cette machine n\'est pas disponible')
-      return
-    }
-
-    try {
-      await startSession(machine.id)
-      Alert.alert('✨ Session démarrée', `Bon courage sur ${machine.name}!`)
-    } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Impossible de démarrer')
-    }
-  }
-
-  const handleEndSession = async () => {
-    if (!activeSession) return
-
-    Alert.alert('Terminer la session', 'Voulez-vous terminer votre session ?', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Terminer',
-        onPress: async () => {
-          try {
-            await endSession(activeSession.id, 3, 10)
-            Alert.alert('🎉 Bien joué!', 'Session terminée avec succès')
-            await loadData()
-          } catch (error: any) {
-            Alert.alert('Erreur', error.message)
-          }
-        },
-      },
-    ])
+    onToggle()
   }
 
   const getStatusColor = (status: string) => {
@@ -203,37 +265,43 @@ export default function MachinesScreen() {
     }
   }
 
-  const getRecommendations = (type: string) => {
-    if (type === 'Cardio') {
-      return { duration: '20-30 min', sets: 'N/A', reps: 'N/A', tips: 'Maintenez un rythme constant' }
-    }
-    return { duration: '15-20 min', sets: '3-4 séries', reps: '12-15 reps', tips: 'Contrôlez le mouvement' }
-  }
+  const liveBadgeOpacity = liveBadgeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.6, 1],
+  })
 
-  // ==================== RENDER MACHINE CARD ====================
-  const renderMachineCard = ({ item }: { item: Machine }) => {
-    const recommendations = getRecommendations(item.type)
-    const isExpanded = expandedMachine === item.id
-    const stats = machineStats[item.id]
-    const history = machineHistory[item.id] || []
-    const isActive = activeSession?.machine_id === item.id
-    
-    return (
+  const recommendations = item.type === 'Cardio' 
+    ? { duration: '20-30 min', sets: 'N/A', reps: 'N/A', tips: 'Maintenez un rythme constant' }
+    : { duration: '15-20 min', sets: '3-4 séries', reps: '12-15 reps', tips: 'Contrôlez le mouvement' }
+
+  return (
+    <Animated.View
+      style={[
+        styles.cardContainer,
+        {
+          opacity: fadeAnim,
+          transform: [
+            { translateY: slideAnim },
+            { scale: scaleAnim },
+          ],
+        },
+      ]}
+    >
       <BlurView intensity={80} tint="light" style={styles.glassCard}>
         <LinearGradient
           colors={isActive ? ['rgba(108,99,255,0.15)', 'rgba(76,81,191,0.05)'] : ['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
           style={styles.cardGradient}
         >
-          <TouchableOpacity onPress={() => toggleMachine(item.id)} activeOpacity={0.9}>
+          <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
             <View style={styles.machineHeader}>
               <View style={styles.machineInfo}>
                 <View style={styles.machineNameRow}>
                   <Text style={styles.machineName}>{item.name}</Text>
                   {isActive && (
-                    <View style={styles.liveBadge}>
+                    <Animated.View style={[styles.liveBadge, { opacity: liveBadgeOpacity }]}>
                       <View style={styles.livePulse} />
                       <Text style={styles.liveText}>LIVE</Text>
-                    </View>
+                    </Animated.View>
                   )}
                 </View>
                 <View style={styles.machineTypeRow}>
@@ -247,11 +315,9 @@ export default function MachinesScreen() {
               </View>
               <View style={styles.headerRight}>
                 <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-                <MaterialIcons 
-                  name={isExpanded ? 'expand-less' : 'expand-more'} 
-                  size={24} 
-                  color="#64748B"
-                />
+                <Animated.View style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }}>
+                  <MaterialIcons name="expand-more" size={24} color="#64748B" />
+                </Animated.View>
               </View>
             </View>
 
@@ -260,6 +326,7 @@ export default function MachinesScreen() {
             )}
           </TouchableOpacity>
 
+          {/* Section détails avec animation */}
           {isExpanded && (
             <View style={styles.detailsSection}>
               {item.image_url && (
@@ -301,9 +368,6 @@ export default function MachinesScreen() {
                           size={14} 
                           color={stats.progression === 'up' ? '#10B981' : '#EF4444'}
                         />
-                        <Text style={[styles.progressionText, { color: stats.progression === 'up' ? '#10B981' : '#EF4444' }]}>
-                          {stats.progression === 'up' ? '+' : '−'}
-                        </Text>
                       </View>
                     )}
                   </View>
@@ -323,13 +387,13 @@ export default function MachinesScreen() {
                 </BlurView>
               )}
 
-              {history.length > 0 && (
+              {history && history.length > 0 && (
                 <View style={styles.historySection}>
                   <View style={styles.historySectionHeader}>
                     <MaterialIcons name="history" size={18} color="#64748B" />
                     <Text style={styles.historySectionTitle}>Historique</Text>
                   </View>
-                  {history.slice(0, 3).map((session, index) => {
+                  {history.slice(0, 3).map((session: any, index: number) => {
                     const sessionDate = new Date(session.start_time)
                     const duration = session.end_time 
                       ? Math.floor((new Date(session.end_time).getTime() - sessionDate.getTime()) / 60000)
@@ -374,10 +438,10 @@ export default function MachinesScreen() {
 
           {isActive ? (
             <>
-              <SessionTimer startTime={activeSession.start_time} />
+              <SessionTimer startTime={activeSession?.start_time} />
               <Button
                 title="Terminer la session"
-                onPress={handleEndSession}
+                onPress={onEndSession}
                 variant="secondary"
                 size="small"
                 style={styles.actionButton}
@@ -386,7 +450,7 @@ export default function MachinesScreen() {
           ) : (
             <Button
               title={item.status === 'available' ? 'Démarrer' : getStatusText(item.status)}
-              onPress={() => handleStartSession(item)}
+              onPress={() => onStartSession(item)}
               variant={item.status === 'available' ? 'primary' : 'secondary'}
               size="small"
               disabled={item.status !== 'available'}
@@ -395,62 +459,147 @@ export default function MachinesScreen() {
           )}
         </LinearGradient>
       </BlurView>
-    )
-  }
+    </Animated.View>
+  )
+})
 
-  // ==================== RENDER MACHINE ROW ====================
-  const renderMachineRow = ({ item }: { item: Machine }) => {
-    const isActive = activeSession?.machine_id === item.id
+// ==================== MAIN COMPONENT ====================
+export default function MachinesScreen() {
+  const {
+    machines,
+    activeSession,
+    fetchMachines,
+    fetchActiveSession,
+    startSession,
+    endSession,
+  } = useMachinesStore()
+  
+  const [refreshing, setRefreshing] = useState(false)
+  const [expandedMachine, setExpandedMachine] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [machineHistory, setMachineHistory] = useState<Record<string, MachineSession[]>>({})
+  const [machineStats, setMachineStats] = useState<Record<string, any>>({})
+  const [loading, setLoading] = useState(true)
+
+  const headerAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    loadData()
     
-    return (
-      <BlurView intensity={60} tint="light" style={styles.machineRowBlur}>
-        <TouchableOpacity
-          style={[styles.machineRow, isActive && styles.machineRowActive]}
-          onPress={() => isActive ? handleEndSession() : handleStartSession(item)}
-          disabled={!isActive && item.status !== 'available'}
-          activeOpacity={0.8}
-        >
-          <View style={styles.rowLeft}>
-            <LinearGradient
-              colors={[`${getStatusColor(item.status)}30`, `${getStatusColor(item.status)}10`]}
-              style={styles.rowIcon}
-            >
-              <MaterialIcons 
-                name={item.type === 'Cardio' ? 'favorite' : 'fitness-center'} 
-                size={24} 
-                color={getStatusColor(item.status)}
-              />
-            </LinearGradient>
-            
-            <View style={styles.rowInfo}>
-              <Text style={styles.rowName}>{item.name}</Text>
-              <View style={styles.rowMeta}>
-                <Text style={styles.rowType}>{item.type}</Text>
-                <View style={styles.rowDot} />
-                <Text style={[styles.rowStatus, { color: getStatusColor(item.status) }]}>
-                  {getStatusText(item.status)}
-                </Text>
-              </View>
-            </View>
-          </View>
+    // Animation du header
+    Animated.timing(headerAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start()
+  }, [])
 
-          <View style={styles.rowRight}>
-            {isActive ? (
-              <LinearGradient colors={['#EF4444', '#DC2626']} style={styles.stopButton}>
-                <MaterialIcons name="stop" size={20} color="#FFF" />
-              </LinearGradient>
-            ) : (
-              <MaterialIcons 
-                name="chevron-right" 
-                size={24} 
-                color={item.status === 'available' ? '#6C63FF' : '#CBD5E1'}
-              />
-            )}
-          </View>
-        </TouchableOpacity>
-      </BlurView>
-    )
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      await Promise.all([fetchMachines(), fetchActiveSession()])
+    } catch (error) {
+      console.error('Load Error:', error)
+    } finally {
+      setLoading(false)
+    }
   }
+
+  const onRefresh = async () => {
+    setRefreshing(true)
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    await loadData()
+    setRefreshing(false)
+  }
+
+  const loadMachineData = async (machineId: string) => {
+    try {
+      const [history, stats] = await Promise.all([
+        machinesService.getMachineSessionHistory(machineId, 5),
+        machinesService.getMachineStats(machineId)
+      ])
+      setMachineHistory(prev => ({ ...prev, [machineId]: history }))
+      setMachineStats(prev => ({ ...prev, [machineId]: stats }))
+    } catch (error) {
+      console.error('Load Machine Data Error:', error)
+    }
+  }
+
+  const toggleMachine = async (machineId: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    const isExpanding = expandedMachine !== machineId
+    setExpandedMachine(isExpanding ? machineId : null)
+    
+    if (isExpanding && !machineHistory[machineId]) {
+      await loadMachineData(machineId)
+    }
+  }
+
+  const toggleView = (mode: 'grid' | 'list') => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setViewMode(mode)
+  }
+
+  const handleStartSession = async (machine: Machine) => {
+    if (activeSession) {
+      Alert.alert('Session active', 'Vous avez déjà une session en cours')
+      return
+    }
+    if (machine.status !== 'available') {
+      Alert.alert('Machine occupée', 'Cette machine n\'est pas disponible')
+      return
+    }
+
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    try {
+      await startSession(machine.id)
+      Alert.alert('✨ Session démarrée', `Bon courage sur ${machine.name}!`)
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Alert.alert('Erreur', error.message || 'Impossible de démarrer')
+    }
+  }
+
+  const handleEndSession = async () => {
+    if (!activeSession) return
+
+    Alert.alert('Terminer la session', 'Voulez-vous terminer votre session ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Terminer',
+        onPress: async () => {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+          try {
+            await endSession(activeSession.id, 3, 10)
+            Alert.alert('🎉 Bien joué!', 'Session terminée avec succès')
+            await loadData()
+          } catch (error: any) {
+            Alert.alert('Erreur', error.message)
+          }
+        },
+      },
+    ])
+  }
+
+  const renderMachineCard = ({ item, index }: { item: Machine; index: number }) => (
+    <AnimatedMachineCard
+      item={item}
+      isExpanded={expandedMachine === item.id}
+      isActive={activeSession?.machine_id === item.id}
+      onToggle={() => toggleMachine(item.id)}
+      onStartSession={handleStartSession}
+      onEndSession={handleEndSession}
+      stats={machineStats[item.id]}
+      history={machineHistory[item.id]}
+      activeSession={activeSession}
+    />
+  )
+
+  const headerTranslate = headerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-50, 0],
+  })
 
   return (
     <ImageBackground
@@ -464,7 +613,14 @@ export default function MachinesScreen() {
       />
       
       <View style={styles.container}>
-        <BlurView intensity={95} tint="light" style={styles.header}>
+        <Animated.View style={[
+          styles.headerContainer,
+          {
+            opacity: headerAnim,
+            transform: [{ translateY: headerTranslate }],
+          }
+        ]}>
+          <BlurView intensity={95} tint="light" style={styles.header}>
           <View>
             <Text style={styles.headerTitle}>Machines</Text>
             <Text style={styles.headerSubtitle}>
@@ -487,14 +643,13 @@ export default function MachinesScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </BlurView>
-
+          </BlurView>
+        </Animated.View>
         <FlatList
           data={machines}
-          renderItem={viewMode === 'grid' ? renderMachineCard : renderMachineRow}
+          renderItem={renderMachineCard}
           keyExtractor={(item) => item.id}
-          key={viewMode}
-          numColumns={viewMode === 'grid' ? 1 : 1}
+          numColumns={1}
           contentContainerStyle={viewMode === 'grid' ? styles.listContent : styles.listContentCompact}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6C63FF" />}
           ListEmptyComponent={<EmptyState />}
@@ -507,6 +662,20 @@ export default function MachinesScreen() {
 
 // ==================== STYLES ====================
 const styles = StyleSheet.create({
+  // Nouveaux styles pour animations
+  cardContainer: {
+    marginBottom: Spacing.md,
+  },
+  headerContainer: {
+    // Style pour l'animation du header
+  },
+  timerGradientContainer: {
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  
   backgroundImage: {
     flex: 1,
     backgroundColor: '#0F172A',
@@ -822,73 +991,6 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     marginTop: Spacing.md,
-  },
-  machineRowBlur: {
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-    marginHorizontal: Spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  machineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-  },
-  machineRowActive: {
-    backgroundColor: 'rgba(108, 99, 255, 0.1)',
-  },
-  rowLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  rowIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rowInfo: {
-    flex: 1,
-  },
-  rowName: {
-    fontSize: FontSize.md,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  rowMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  rowType: {
-    fontSize: FontSize.xs,
-    color: '#64748B',
-  },
-  rowStatus: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-  },
-  rowDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#CBD5E1',
-  },
-  rowRight: {
-    marginLeft: Spacing.sm,
-  },
-  stopButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   emptyState: {
     padding: Spacing.xxl,

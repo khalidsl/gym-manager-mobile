@@ -50,10 +50,10 @@ const COLORS = {
 }
 
 const GRADIENTS = {
-  primary: ['#FF6B35', '#F77F00'],
-  secondary: ['#004E89', '#1A659E'],
-  dark: ['#0A0E27', '#1A1F3A'],
-  card: ['#1A1F3A', '#252B4A'],
+  primary: ['#FF6B35', '#bd9f7e'] as const,
+  secondary: ['#004E89', '#1A659E'] as const,
+  dark: ['#0A0E27', '#1A1F3A'] as const,
+  card: ['#1A1F3A', '#252B4A'] as const,
 }
 
 const TAB_ICONS: { [key: string]: string } = {
@@ -73,7 +73,7 @@ const TabIcon = ({ name, focused }: { name: string; focused: boolean }) => {
   
   return (
     <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
-      <MaterialIcons name={iconName} size={size} color={color} />
+      <MaterialIcons name={iconName as any} size={size} color={color} />
       {focused && <View style={styles.tabIndicator} />}
     </View>
   )

@@ -14,7 +14,7 @@ export const LightTheme = {
   error: '#EF4444',
   info: '#3B82F6',
   overlay: 'rgba(0, 0, 0, 0.5)',
-  gradient: ['#6C63FF', '#4C51BF'],
+  gradient: ['#6C63FF', '#4C51BF'] as const,
 }
 
 export const DarkTheme = {
@@ -33,7 +33,7 @@ export const DarkTheme = {
   error: '#EF4444',
   info: '#3B82F6',
   overlay: 'rgba(0, 0, 0, 0.7)',
-  gradient: ['#7C3AED', '#5B21B6'],
+  gradient: ['#7C3AED', '#5B21B6'] as const,
 }
 
 export const Colors = {
@@ -60,11 +60,11 @@ export const FontSize = {
 }
 
 export const FontWeight = {
-  normal: '400',
-  medium: '500',
-  semibold: '600',
-  bold: '700',
-  extrabold: '800',
+  normal: '400' as const,
+  medium: '500' as const,
+  semibold: '600' as const,
+  bold: '700' as const,
+  extrabold: '800' as const,
 }
 
 export const BorderRadius = {
@@ -74,4 +74,13 @@ export const BorderRadius = {
   xl: 16,
   xxl: 24,
   full: 9999,
+}
+
+export const GRADIENTS = {
+  primary: ['#6C63FF', '#4C51BF'] as const,
+  secondary: ['#10B981', '#059669'] as const,
+  accent: ['#F59E0B', '#D97706'] as const,
+  danger: ['#EF4444', '#DC2626'] as const,
+  dark: ['#0F172A', '#1E293B'] as const,
+  light: ['#F8FAFC', '#E2E8F0'] as const,
 }
