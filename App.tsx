@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useAuthStore } from './store/authStore'
 import { ThemeProvider as CustomThemeProvider } from './contexts/ThemeContext'
 
-// Screens
+// Member Screens
 import LoginScreen from './screens/LoginScreen'
 import RegisterScreen from './screens/RegisterScreen'
 import DashboardScreen from './screens/DashboardScreen'
@@ -17,6 +17,9 @@ import MachinesScreen from './screens/MachinesScreen'
 import ScannerScreen from './screens/ScannerScreen'
 import ScheduleScreen from './screens/ScheduleScreen'
 import ProfileScreen from './screens/ProfileScreen'
+
+// Admin Layout
+import AdminLayout from './app/admin/_layout'
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -115,7 +118,7 @@ class ErrorBoundary extends React.Component<
             <MaterialIcons name="error-outline" size={80} color={COLORS.danger} />
             <Text style={styles.errorTitle}>Oups ! Une erreur s'est produite</Text>
             <Text style={styles.errorText}>
-              {this.state.error?.message || 'Erreur inconnue'}
+              {String(this.state.error?.message || 'Erreur inconnue')}
             </Text>
             <View style={styles.errorHintContainer}>
               <MaterialIcons name="info" size={16} color={COLORS.textMuted} />
@@ -209,7 +212,7 @@ function TabNavigator() {
 // ========== MAIN APP ==========
 
 export default function App() {
-  const { initialize, initialized, session } = useAuthStore()
+  const { initialize, initialized, session, user } = useAuthStore()
 
   useEffect(() => {
     initialize()
@@ -218,6 +221,9 @@ export default function App() {
   if (!initialized) {
     return <LoadingScreen />
   }
+
+  // Determine user role - check if user is admin
+  const isAdmin = user?.role === 'admin' || user?.user_metadata?.role === 'admin'
 
   return (
     <CustomThemeProvider>
@@ -231,7 +237,13 @@ export default function App() {
                 <Stack.Screen name="Register" component={RegisterScreen} />
               </>
             ) : (
-              <Stack.Screen name="Main" component={TabNavigator} />
+              <>
+                {isAdmin ? (
+                  <Stack.Screen name="AdminPanel" component={AdminLayout} />
+                ) : (
+                  <Stack.Screen name="Main" component={TabNavigator} />
+                )}
+              </>
             )}
           </Stack.Navigator>
         </NavigationContainer>

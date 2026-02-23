@@ -22,7 +22,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     <ThemeContext.Provider
       value={{
         ...themeHook,
-        colors,
+        colors: colors as any,  // Type fix for consistency
       }}
     >
       {children}
@@ -37,3 +37,6 @@ export const useThemeContext = () => {
   }
   return context
 }
+
+// Export useTheme for compatibility
+export { useTheme } from '../hooks/useTheme'

@@ -193,7 +193,7 @@ const AnimatedClassCard = ({
               <View style={styles.instructorRow}>
                 <MaterialIcons name="person" size={14} color="#6C63FF" />
                 <Text style={styles.instructor}>
-                  {classItem.coach?.full_name || 'Coach'}
+                  {String(classItem.coach?.full_name || 'Coach')}
                 </Text>
               </View>
             </View>
@@ -222,7 +222,7 @@ const AnimatedClassCard = ({
                 <MaterialIcons name="access-time" size={16} color="#6C63FF" />
               </LinearGradient>
               <Text style={styles.detailText}>
-                {classItem.start_time} - {classItem.end_time}
+                {String(classItem.start_time)} - {String(classItem.end_time)}
               </Text>
             </View>
             
@@ -396,7 +396,7 @@ export default function ScheduleScreen() {
         .order('start_time')
 
       if (error) throw error
-      setClasses(data || [])
+      setClasses((data || []) as any)  // Temporary type fix
     } catch (error) {
       console.error('Fetch Classes Error:', error)
     }

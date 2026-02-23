@@ -220,7 +220,7 @@ export default function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {profile?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                {String(profile?.full_name?.charAt(0)?.toUpperCase() || '?')}
               </Text>
             </View>
             <MaterialIcons 
@@ -231,7 +231,7 @@ export default function ProfileScreen() {
             />
           </View>
           
-          <Text style={styles.headerName}>{profile?.full_name || 'Utilisateur'}</Text>
+          <Text style={styles.headerName}>{String(profile?.full_name || 'Utilisateur')}</Text>
           <Text style={styles.headerEmail}>{profile?.email}</Text>
           
           <View style={styles.membershipTypeContainer}>
@@ -245,7 +245,7 @@ export default function ProfileScreen() {
           <View style={styles.quickStatCard}>
             <LinearGradient colors={['#06D6A0', '#1BE7FF']} style={styles.quickStatGradient}>
               <MaterialIcons name="login" size={24} color="#fff" />
-              <Text style={styles.quickStatNumber}>{accessStats.entries}</Text>
+              <Text style={styles.quickStatNumber}>{String(accessStats.entries || 0)}</Text>
               <Text style={styles.quickStatLabel}>Visites</Text>
             </LinearGradient>
           </View>
@@ -253,7 +253,7 @@ export default function ProfileScreen() {
           <View style={styles.quickStatCard}>
             <LinearGradient colors={GRADIENTS.primary} style={styles.quickStatGradient}>
               <MaterialIcons name="fitness-center" size={24} color="#fff" />
-              <Text style={styles.quickStatNumber}>{stats?.totalSessions || 0}</Text>
+              <Text style={styles.quickStatNumber}>{String(stats?.totalSessions || 0)}</Text>
               <Text style={styles.quickStatLabel}>Sessions</Text>
             </LinearGradient>
           </View>
@@ -261,7 +261,7 @@ export default function ProfileScreen() {
           <View style={styles.quickStatCard}>
             <LinearGradient colors={['#FFD23F', '#FFEB3B']} style={styles.quickStatGradient}>
               <MaterialIcons name="local-fire-department" size={24} color="#fff" />
-              <Text style={styles.quickStatNumber}>{stats?.calories || 0}</Text>
+              <Text style={styles.quickStatNumber}>{String(stats?.calories || 0)}</Text>
               <Text style={styles.quickStatLabel}>Calories</Text>
             </LinearGradient>
           </View>
@@ -333,19 +333,19 @@ export default function ProfileScreen() {
               {/* Stats Grid */}
               <View style={styles.statsGrid}>
                 <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatValue}>{stats.totalSessions}</Text>
+                  <Text style={styles.miniStatValue}>{String(stats.totalSessions || 0)}</Text>
                   <Text style={styles.miniStatLabel}>Sessions</Text>
                 </View>
                 <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatValue}>{stats.totalMinutes}</Text>
+                  <Text style={styles.miniStatValue}>{String(stats.totalMinutes || 0)}</Text>
                   <Text style={styles.miniStatLabel}>Minutes</Text>
                 </View>
                 <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatValue}>{stats.totalSets}</Text>
+                  <Text style={styles.miniStatValue}>{String(stats.totalSets || 0)}</Text>
                   <Text style={styles.miniStatLabel}>Séries</Text>
                 </View>
                 <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatValue}>{stats.calories}</Text>
+                  <Text style={styles.miniStatValue}>{String(stats.calories || 0)}</Text>
                   <Text style={styles.miniStatLabel}>Calories</Text>
                 </View>
               </View>
@@ -361,6 +361,10 @@ export default function ProfileScreen() {
                 height={200}
                 chartConfig={chartConfig}
                 style={styles.chart}
+                yAxisLabel=""
+                yAxisSuffix=" min"
+                showBarTops={false}
+                fromZero={true}
               />
             </View>
           )}
@@ -398,7 +402,7 @@ export default function ProfileScreen() {
                       <View style={styles.goalInfo}>
                         <Text style={styles.goalTitle}>{goal.title}</Text>
                         <Text style={styles.goalProgress}>
-                          {goal.current} / {goal.target} {goal.unit}
+                          {String(goal.current)} / {String(goal.target)} {String(goal.unit)}
                         </Text>
                       </View>
 
@@ -456,7 +460,7 @@ export default function ProfileScreen() {
                       styles.achievementTitle,
                       !achievement.unlocked && styles.achievementTitleLocked
                     ]}>
-                      {achievement.title}
+                      {String(achievement.title)}
                     </Text>
                     {achievement.unlocked && (
                       <View style={styles.achievementBadge}>

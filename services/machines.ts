@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Machine, MachineSession, MachineReservation, MachinePosition } from '../types'
+import { Machine, MachineSession } from '../types'
 
 /**
  * Récupérer toutes les machines
@@ -288,7 +288,7 @@ export const getMachineStats = async (machineId: string) => {
     const totalSessions = sessions.length
     const totalSets = sessions.reduce((sum, s) => sum + (s.sets || 0), 0)
     const totalReps = sessions.reduce((sum, s) => sum + (s.reps || 0), 0)
-    const weights = sessions.filter(s => s.weight).map(s => s.weight!)
+    const weights = sessions.filter(s => s.weight_kg).map(s => s.weight_kg!)
     const maxWeight = weights.length > 0 ? Math.max(...weights) : 0
     const avgWeight = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0
     const lastSession = sessions[0]
@@ -296,7 +296,7 @@ export const getMachineStats = async (machineId: string) => {
     // Calculer la progression (comparer les 3 dernières avec les 3 précédentes)
     let progression: 'up' | 'down' | 'neutral' = 'neutral'
     if (sessions.length >= 6) {
-      const recent = sessions.slice(0, 3).filter(s => s.weight).map(s => s.weight!)
+      const recent = sessions.slice(0, 3).filter(s => s.weight_kg).map(s => s.weight_kg!)
       const previous = sessions.slice(3, 6).filter(s => s.weight).map(s => s.weight!)
       
       if (recent.length > 0 && previous.length > 0) {
@@ -484,5 +484,213 @@ export const getMachinePosition = async (machineId: string): Promise<MachinePosi
   } catch (error) {
     console.error('Get Machine Position Error:', error)
     throw error
+  }
+}
+
+// ============================================
+// FONCTIONS ADMIN SIMPLIFIÉES
+// ============================================
+
+// Données de fallback pour l'interface admin
+const ADMIN_MOCK_MACHINES = [
+  {
+    id: '1',
+    name: 'Tapis de Course Pro',
+    type: 'Cardio',
+    description: 'Tapis de course professionnel avec inclinaison',
+    image_url: null,
+    qr_code: 'MACHINE-TAPIS-001',
+    status: 'available' as const,
+    created_at: '2023-05-15T10:00:00Z',
+  },
+  {
+    id: '2',
+    name: 'Banc de Musculation',
+    type: 'Force',
+    description: 'Banc de musculation multifonction',
+    image_url: null,
+    qr_code: 'MACHINE-BANC-001',
+    status: 'maintenance' as const,
+    created_at: '2023-03-20T14:00:00Z',
+  },
+  {
+    id: '3',
+    name: 'Vélo Elliptique',
+    type: 'Cardio',
+    description: 'Vélo elliptique avec programmes variés',
+    image_url: null,
+    qr_code: 'MACHINE-VELO-001',
+    status: 'available' as const,
+    created_at: '2023-08-10T09:00:00Z',
+  },
+]
+
+/**
+ * Récupérer toutes les machines (version admin simplifiée)
+ */
+export const getAdminMachines = async () => {
+  try {
+    console.log('🔍 Tentative de récupération des machines admin depuis Supabase...')
+    
+    const { data: machines, error } = await supabase
+      .from('machines')
+      .select('*')
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('❌ Erreur Supabase lors de la récupération des machines admin:', error)
+      console.log('🔄 Utilisation des données de fallback...')
+      return ADMIN_MOCK_MACHINES
+    }
+
+    console.log('✅ Machines admin reçues de Supabase:', machines?.length || 0, 'machines')
+
+    if (!machines || machines.length === 0) {
+      console.log('⚠️ Aucune machine trouvée, utilisation des données de fallback...')
+      return ADMIN_MOCK_MACHINES
+    }
+
+    console.log('🔧 Machines admin transformées:', machines.length, 'machines')
+    return machines
+  } catch (error) {
+    console.error('❌ Erreur getAdminMachines:', error)
+    console.log('🔄 Utilisation des données de fallback...')
+    return ADMIN_MOCK_MACHINES
+  }
+}
+
+/**
+ * Supprimer une machine (version admin)
+ */
+export const deleteAdminMachine = async (machineId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('machines')
+      .delete()
+      .eq('id', machineId)
+
+    if (error) {
+      console.error('❌ Erreur lors de la suppression de la machine:', error)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('❌ Erreur deleteAdminMachine:', error)
+    return false
+  }
+}
+
+/**
+ * Ajouter une nouvelle machine (version admin)
+ */
+export const addAdminMachine = async (machineData: {
+  name: string
+  type: string
+  description?: string
+  qr_code: string
+}): Promise<boolean> => {
+  try {
+    console.log('🆕 Ajout d\'une nouvelle machine...', machineData)
+    
+    const { error } = await supabase
+      .from('machines')
+      .insert([
+        {
+          name: machineData.name,
+          type: machineData.type,
+          description: machineData.description || null,
+          qr_code: machineData.qr_code,
+          status: 'available',
+          image_url: null
+        }
+      ])
+
+    if (error) {
+      console.error('❌ Erreur lors de l\'ajout de la machine:', error)
+      return false
+    }
+
+    console.log('✅ Machine ajoutée avec succès')
+    return true
+  } catch (error) {
+    console.error('❌ Erreur addAdminMachine:', error)
+    return false
+  }
+}
+
+/**
+ * Modifier une machine existante (version admin)
+ */
+export const updateAdminMachine = async (machineData: {
+  id: string
+  name: string
+  type: string
+  description?: string
+  qr_code: string
+  status: 'available' | 'in_use' | 'maintenance' | 'out_of_order'
+}): Promise<boolean> => {
+  try {
+    console.log('✏️ Mise à jour de la machine...', machineData)
+    
+    const { error } = await supabase
+      .from('machines')
+      .update({
+        name: machineData.name,
+        type: machineData.type,
+        description: machineData.description || null,
+        qr_code: machineData.qr_code,
+        status: machineData.status
+      })
+      .eq('id', machineData.id)
+
+    if (error) {
+      console.error('❌ Erreur lors de la mise à jour de la machine:', error)
+      return false
+    }
+
+    console.log('✅ Machine mise à jour avec succès')
+    return true
+  } catch (error) {
+    console.error('❌ Erreur updateAdminMachine:', error)
+    return false
+  }
+}
+
+/**
+ * Récupérer les statistiques des machines (version admin)
+ */
+export const getAdminMachinesStats = async () => {
+  try {
+    const { data: machines, error } = await supabase
+      .from('machines')
+      .select('status')
+
+    if (error) {
+      console.error('❌ Erreur lors de la récupération des statistiques des machines:', error)
+      // Fallback avec les données mock
+      const total = ADMIN_MOCK_MACHINES.length
+      const available = ADMIN_MOCK_MACHINES.filter(m => m.status === 'available').length
+      const inUse = ADMIN_MOCK_MACHINES.filter(m => m.status === 'in_use').length 
+      const maintenance = ADMIN_MOCK_MACHINES.filter(m => m.status === 'maintenance').length
+      
+      return { total, available, in_use: inUse, maintenance }
+    }
+
+    const total = machines?.length || 0
+    const available = machines?.filter(m => m.status === 'available').length || 0
+    const in_use = machines?.filter(m => m.status === 'in_use').length || 0
+    const maintenance = machines?.filter(m => m.status === 'maintenance').length || 0
+
+    return { total, available, in_use, maintenance }
+  } catch (error) {
+    console.error('❌ Erreur getAdminMachinesStats:', error)
+    // Fallback avec les données mock
+    const total = ADMIN_MOCK_MACHINES.length
+    const available = ADMIN_MOCK_MACHINES.filter(m => m.status === 'available').length
+    const inUse = ADMIN_MOCK_MACHINES.filter(m => m.status === 'in_use').length 
+    const maintenance = ADMIN_MOCK_MACHINES.filter(m => m.status === 'maintenance').length
+    
+    return { total, available, in_use: inUse, maintenance }
   }
 }

@@ -14,6 +14,8 @@ export const LightTheme = {
   error: '#EF4444',
   info: '#3B82F6',
   overlay: 'rgba(0, 0, 0, 0.5)',
+  disabled: '#CBD5E1',
+  placeholder: '#94A3B8',
   gradient: ['#6C63FF', '#4C51BF'] as const,
 }
 
@@ -33,12 +35,22 @@ export const DarkTheme = {
   error: '#EF4444',
   info: '#3B82F6',
   overlay: 'rgba(0, 0, 0, 0.7)',
+  disabled: '#64748B',
+  placeholder: '#64748B',
   gradient: ['#7C3AED', '#5B21B6'] as const,
 }
 
 export const Colors = {
   light: LightTheme,
   dark: DarkTheme,
+  // Propriétés directes pour compatibilité  
+  primary: LightTheme.primary,
+  secondary: LightTheme.secondary,
+  accent: LightTheme.accent,
+  success: LightTheme.success,
+  warning: LightTheme.warning,
+  error: LightTheme.error,
+  info: LightTheme.info,
 }
 
 export const Spacing = {

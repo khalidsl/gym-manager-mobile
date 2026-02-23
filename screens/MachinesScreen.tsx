@@ -373,9 +373,9 @@ const AnimatedMachineCard = memo(({
                   </View>
                   <View style={styles.statsGrid}>
                     {[
-                      { icon: 'calendar-today', value: stats.totalSessions, label: 'Sessions', color: '#6366F1' },
-                      { icon: 'fitness-center', value: `${stats.maxWeight} kg`, label: 'Max', color: '#10B981' },
-                      { icon: 'show-chart', value: `${stats.avgWeight.toFixed(1)} kg`, label: 'Moy.', color: '#F59E0B' },
+                      { icon: 'calendar-today', value: stats.totalSessions || 0, label: 'Sessions', color: '#6366F1' },
+                      { icon: 'fitness-center', value: `${stats.maxWeight || 0} kg`, label: 'Max', color: '#10B981' },
+                      { icon: 'show-chart', value: `${(stats.avgWeight || 0).toFixed(1)} kg`, label: 'Moy.', color: '#F59E0B' },
                     ].map((stat, idx) => (
                       <View key={idx} style={styles.statPill}>
                         <MaterialIcons name={stat.icon as any} size={18} color={stat.color} />
@@ -403,10 +403,10 @@ const AnimatedMachineCard = memo(({
                       <View key={session.id} style={styles.historyItem}>
                         <View style={styles.historyLeft}>
                           <Text style={styles.historyDate}>
-                            {sessionDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                            {String(sessionDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }))}
                           </Text>
                           <Text style={styles.historyTime}>
-                            {sessionDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            {String(sessionDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))}
                           </Text>
                         </View>
                         <View style={styles.historyRight}>

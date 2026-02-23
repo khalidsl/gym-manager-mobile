@@ -127,7 +127,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
         {slides.map((slide, index) => (
           <View key={index} style={styles.slide}>
             <LinearGradient
-              colors={slide.gradient}
+              colors={slide.gradient as any}
               style={StyleSheet.absoluteFill}
             />
             

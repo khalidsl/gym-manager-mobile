@@ -144,8 +144,8 @@ export default function DashboardScreen() {
         const end = s.end_time ? new Date(s.end_time).getTime() : new Date().getTime()
         totalMinutes += (end - start) / 60000
         totalSets += (s.sets || 0)
-        if (s.weight) {
-          totalWeight += s.weight
+        if (s.weight_kg) {
+          totalWeight += s.weight_kg
           sessionsWithWeight++
         }
       })
@@ -340,22 +340,22 @@ export default function DashboardScreen() {
             <View style={styles.heroRow}>
               <View>
                 <Text style={styles.heroGreeting}>
-                  Bonjour, {profile?.full_name?.split(' ')[0] || 'athlète'}
+                  Bonjour, {String(profile?.full_name?.split(' ')[0] || 'athlète')}
                 </Text>
                 <Text style={styles.heroSub}>Continuez sur votre lancée ✨</Text>
               </View>
               <Animated.View entering={ZoomIn.delay(600)} style={styles.heroBadge}>
                 <MaterialIcons name="bolt" size={18} color="#fff" />
-                <Text style={styles.heroBadgeText}>{weeklyStats?.sessions || 0} séances</Text>
+                <Text style={styles.heroBadgeText}>{String(weeklyStats?.sessions || 0)} séances</Text>
               </Animated.View>
             </View>
             <View style={styles.heroStats}>
               <Animated.View entering={SlideInLeft.delay(400)} style={styles.heroStatPill}>
-                <Text style={styles.heroStatValue}>{weeklyStats?.minutes || 0} min</Text>
+                <Text style={styles.heroStatValue}>{String(weeklyStats?.minutes || 0)} min</Text>
                 <Text style={styles.heroStatLabel}>Cette semaine</Text>
               </Animated.View>
               <Animated.View entering={SlideInRight.delay(500)} style={styles.heroStatPill}>
-                <Text style={styles.heroStatValue}>{weeklyStats?.calories || 0} kcal</Text>
+                <Text style={styles.heroStatValue}>{String(weeklyStats?.calories || 0)} kcal</Text>
                 <Text style={styles.heroStatLabel}>Estimées</Text>
               </Animated.View>
             </View>
@@ -392,7 +392,7 @@ export default function DashboardScreen() {
               style={styles.splitCardPrimary}
             >
               <Text style={styles.splitCardLabel}>Jour de pic</Text>
-              <Text style={styles.splitCardValue}>{peakDay?.day || '—'}</Text>
+              <Text style={styles.splitCardValue}>{String(peakDay?.day || '—')}</Text>
               <Text style={styles.splitCardHint}>
                 {peakDay?.value ? `${peakDay.value} min d'effort` : 'En attente de données'}
               </Text>

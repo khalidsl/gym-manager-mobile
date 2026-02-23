@@ -50,7 +50,7 @@ export const WeeklyActivityCard: React.FC<WeeklyActivityCardProps> = ({
                 />
               </View>
               <Text style={[styles.dayLabel, isActive && styles.dayLabelActive]}>
-                {item.day}
+                {String(item.day)}
               </Text>
             </View>
           )
