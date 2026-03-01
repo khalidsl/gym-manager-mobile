@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ImageBackground } from 'react-native'
 import PagerView from 'react-native-pager-view'
 import Animated, {
   useAnimatedStyle,
@@ -107,7 +107,12 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
   })
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require('../assets/gym-bg.jpg')}
+      style={styles.container}
+      imageStyle={{ opacity: 0.3 }}
+      resizeMode="cover"
+    >
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
@@ -128,9 +133,9 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
           <View key={index} style={styles.slide}>
             <LinearGradient
               colors={slide.gradient as any}
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, { opacity: 0.85 }]}
             />
-            
+
             <View style={styles.slideContent}>
               <View style={styles.iconContainer}>
                 <LinearGradient
@@ -175,7 +180,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
           style={styles.nextButton}
         />
       </View>
-    </View>
+    </ImageBackground>
   )
 }
 

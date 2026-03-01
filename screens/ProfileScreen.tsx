@@ -11,7 +11,9 @@ import {
   Switch,
   TextInput,
   ImageBackground,
+  Image,
 } from 'react-native'
+import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialIcons } from '@expo/vector-icons'
 import QRCode from 'react-native-qrcode-svg'
@@ -27,10 +29,10 @@ const { width } = Dimensions.get('window')
 type ExpandedSection = 'qr' | 'stats' | 'goals' | 'achievements' | 'settings' | 'help' | null
 
 export default function ProfileScreen() {
-  const { profile, membership, signOut } = useAuthStore()
+  const { profile, membership, signOut, updateProfile } = useAuthStore()
   const { accessHistory, fetchAccessHistory } = useAccessStore()
   const { sessionHistory, fetchSessionHistory } = useMachinesStore()
-  
+
   const [expandedSection, setExpandedSection] = useState<ExpandedSection>(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [darkModeEnabled, setDarkModeEnabled] = useState(false)
@@ -51,15 +53,15 @@ export default function ProfileScreen() {
 
   const calculateStats = () => {
     const last30Days = sessionHistory.slice(0, 30)
-    
+
     const totalSessions = last30Days.length
     const totalMinutes = last30Days.reduce((sum, s) => {
-      const duration = s.end_time 
+      const duration = s.end_time
         ? (new Date(s.end_time).getTime() - new Date(s.start_time).getTime()) / 60000
         : 0
       return sum + duration
     }, 0)
-    
+
     const totalSets = last30Days.reduce((sum, s) => sum + (s.sets || 0), 0)
     const calories = Math.round(totalMinutes * 5)
 
@@ -109,6 +111,27 @@ export default function ProfileScreen() {
     )
   }
 
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      })
+
+      if (!result.canceled && result.assets[0].base64) {
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`
+        await updateProfile({ avatar_url: base64Image })
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      }
+    } catch (error) {
+      console.error(error)
+      Alert.alert('Erreur', 'Impossible de charger l\'image de profil')
+    }
+  }
+
   const getMembershipConfig = (type: string) => {
     switch (type) {
       case 'vip':
@@ -141,8 +164,8 @@ export default function ProfileScreen() {
     const thisMonth = accessHistory.filter(log => {
       const logDate = new Date(log.timestamp)
       const now = new Date()
-      return logDate.getMonth() === now.getMonth() && 
-             logDate.getFullYear() === now.getFullYear()
+      return logDate.getMonth() === now.getMonth() &&
+        logDate.getFullYear() === now.getFullYear()
     })
     return {
       total: thisMonth.length,
@@ -199,408 +222,418 @@ export default function ProfileScreen() {
   ]
 
   return (
-    <ImageBackground 
-      source={require('../assets/gym-bg.jpg')} 
+    <ImageBackground
+      source={require('../assets/gym-bg.jpg')}
       style={styles.container}
       resizeMode="cover"
     >
       <View style={styles.overlay}>
-        <ScrollView 
-          style={styles.scrollView} 
+        <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-        {/* ===== HEADER CARD ===== */}
-        <LinearGradient
-          colors={membershipConfig.gradient}
-          style={styles.headerCard}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {String(profile?.full_name?.charAt(0)?.toUpperCase() || '?')}
-              </Text>
-            </View>
-            <MaterialIcons 
-              name={membershipConfig.icon as any} 
-              size={24} 
-              color="#fff" 
-              style={styles.membershipBadge}
-            />
-          </View>
-          
-          <Text style={styles.headerName}>{String(profile?.full_name || 'Utilisateur')}</Text>
-          <Text style={styles.headerEmail}>{profile?.email}</Text>
-          
-          <View style={styles.membershipTypeContainer}>
-            <MaterialIcons name="verified" size={16} color="#fff" style={{ marginRight: 4 }} />
-            <Text style={styles.membershipTypeText}>{membershipConfig.label}</Text>
-          </View>
-        </LinearGradient>
-
-        {/* ===== STATS RAPIDES ===== */}
-        <View style={styles.quickStats}>
-          <View style={styles.quickStatCard}>
-            <LinearGradient colors={['#06D6A0', '#1BE7FF']} style={styles.quickStatGradient}>
-              <MaterialIcons name="login" size={24} color="#fff" />
-              <Text style={styles.quickStatNumber}>{String(accessStats.entries || 0)}</Text>
-              <Text style={styles.quickStatLabel}>Visites</Text>
-            </LinearGradient>
-          </View>
-
-          <View style={styles.quickStatCard}>
-            <LinearGradient colors={GRADIENTS.primary} style={styles.quickStatGradient}>
-              <MaterialIcons name="fitness-center" size={24} color="#fff" />
-              <Text style={styles.quickStatNumber}>{String(stats?.totalSessions || 0)}</Text>
-              <Text style={styles.quickStatLabel}>Sessions</Text>
-            </LinearGradient>
-          </View>
-
-          <View style={styles.quickStatCard}>
-            <LinearGradient colors={['#FFD23F', '#FFEB3B']} style={styles.quickStatGradient}>
-              <MaterialIcons name="local-fire-department" size={24} color="#fff" />
-              <Text style={styles.quickStatNumber}>{String(stats?.calories || 0)}</Text>
-              <Text style={styles.quickStatLabel}>Calories</Text>
-            </LinearGradient>
-          </View>
-        </View>
-
-        {/* ===== MENU SECTIONS ===== */}
-
-        {/* QR CODE */}
-        <TouchableOpacity
-          style={styles.sectionCard}
-          onPress={() => toggleSection('qr')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderLeft}>
-              <MaterialIcons name="qr-code-2" size={24} color="#FF6B35" />
-              <Text style={styles.sectionTitle}>Mon QR Code</Text>
-            </View>
-            <MaterialIcons 
-              name={expandedSection === 'qr' ? 'expand-less' : 'expand-more'} 
-              size={24} 
-              color="#6C7A9B" 
-            />
-          </View>
-
-          {expandedSection === 'qr' && (
-            <View style={styles.sectionContent}>
-              <View style={styles.qrCodeContainer}>
-                <View style={styles.qrCodeWrapper}>
-                  <QRCode
-                    value={profile?.qr_code || 'NO_QR'}
-                    size={200}
-                    backgroundColor="white"
-                    color="#FF6B35"
-                  />
+          {/* ===== HEADER CARD ===== */}
+          <LinearGradient
+            colors={membershipConfig.gradient}
+            style={styles.headerCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.avatarContainer}>
+              <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8} style={{ alignItems: 'center' }}>
+                <View style={styles.avatar}>
+                  {profile?.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarText}>
+                      {String(profile?.full_name?.charAt(0)?.toUpperCase() || '?')}
+                    </Text>
+                  )}
                 </View>
-                <View style={styles.qrCodeInfo}>
-                  <MaterialIcons name="info-outline" size={16} color="#6C7A9B" />
-                  <Text style={styles.qrCodeText}>
-                    Scannez ce code à l'entrée/sortie
-                  </Text>
+                <View style={styles.editAvatarBadge}>
+                  <MaterialIcons name="edit" size={14} color="#fff" />
                 </View>
-                <Text style={styles.qrCodeValue}>{profile?.qr_code}</Text>
-              </View>
-            </View>
-          )}
-        </TouchableOpacity>
+              </TouchableOpacity>
 
-        {/* STATISTIQUES DÉTAILLÉES */}
-        <TouchableOpacity
-          style={styles.sectionCard}
-          onPress={() => toggleSection('stats')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderLeft}>
-              <MaterialIcons name="bar-chart" size={24} color="#6366F1" />
-              <Text style={styles.sectionTitle}>Statistiques détaillées</Text>
-            </View>
-            <MaterialIcons 
-              name={expandedSection === 'stats' ? 'expand-less' : 'expand-more'} 
-              size={24} 
-              color="#6C7A9B" 
-            />
-          </View>
-
-          {expandedSection === 'stats' && stats && (
-            <View style={styles.sectionContent}>
-              {/* Stats Grid */}
-              <View style={styles.statsGrid}>
-                <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatValue}>{String(stats.totalSessions || 0)}</Text>
-                  <Text style={styles.miniStatLabel}>Sessions</Text>
-                </View>
-                <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatValue}>{String(stats.totalMinutes || 0)}</Text>
-                  <Text style={styles.miniStatLabel}>Minutes</Text>
-                </View>
-                <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatValue}>{String(stats.totalSets || 0)}</Text>
-                  <Text style={styles.miniStatLabel}>Séries</Text>
-                </View>
-                <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatValue}>{String(stats.calories || 0)}</Text>
-                  <Text style={styles.miniStatLabel}>Calories</Text>
-                </View>
-              </View>
-
-              {/* Chart */}
-              <Text style={styles.chartTitle}>Activité hebdomadaire</Text>
-              <BarChart
-                data={{
-                  labels: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
-                  datasets: [{ data: stats.weeklyData.length ? stats.weeklyData : [0,0,0,0,0,0,0] }],
-                }}
-                width={width - 64}
-                height={200}
-                chartConfig={chartConfig}
-                style={styles.chart}
-                yAxisLabel=""
-                yAxisSuffix=" min"
-                showBarTops={false}
-                fromZero={true}
+              <MaterialIcons
+                name={membershipConfig.icon as any}
+                size={24}
+                color="#fff"
+                style={styles.membershipBadge}
               />
             </View>
-          )}
-        </TouchableOpacity>
 
-        {/* MES OBJECTIFS */}
-        <TouchableOpacity
-          style={styles.sectionCard}
-          onPress={() => toggleSection('goals')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderLeft}>
-              <MaterialIcons name="flag" size={24} color="#06D6A0" />
-              <Text style={styles.sectionTitle}>Mes objectifs</Text>
+            <Text style={styles.headerName}>{String(profile?.full_name || 'Utilisateur')}</Text>
+            <Text style={styles.headerEmail}>{profile?.email}</Text>
+
+            <View style={styles.membershipTypeContainer}>
+              <MaterialIcons name="verified" size={16} color="#fff" style={{ marginRight: 4 }} />
+              <Text style={styles.membershipTypeText}>{membershipConfig.label}</Text>
             </View>
-            <MaterialIcons 
-              name={expandedSection === 'goals' ? 'expand-less' : 'expand-more'} 
-              size={24} 
-              color="#6C7A9B" 
-            />
-          </View>
-
-          {expandedSection === 'goals' && (
-            <View style={styles.sectionContent}>
-              {goals.map(goal => {
-                const progress = Math.min((goal.current / goal.target) * 100, 100)
-                return (
-                  <View key={goal.id} style={styles.goalCard}>
-                    <View style={styles.goalHeader}>
-                      <LinearGradient colors={goal.color} style={styles.goalIcon}>
-                        <MaterialIcons name={goal.icon as any} size={20} color="#fff" />
-                      </LinearGradient>
-                      
-                      <View style={styles.goalInfo}>
-                        <Text style={styles.goalTitle}>{goal.title}</Text>
-                        <Text style={styles.goalProgress}>
-                          {String(goal.current)} / {String(goal.target)} {String(goal.unit)}
-                        </Text>
-                      </View>
-
-                      <Text style={styles.goalPercentage}>{Math.round(progress)}%</Text>
-                    </View>
-
-                    <View style={styles.progressBarContainer}>
-                      <LinearGradient
-                        colors={goal.color}
-                        style={[styles.progressBar, { width: `${progress}%` }]}
-                      />
-                    </View>
-                  </View>
-                )
-              })}
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* BADGES & RÉALISATIONS */}
-        <TouchableOpacity
-          style={styles.sectionCard}
-          onPress={() => toggleSection('achievements')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderLeft}>
-              <MaterialIcons name="emoji-events" size={24} color="#FFD700" />
-              <Text style={styles.sectionTitle}>Badges & Réalisations</Text>
-            </View>
-            <MaterialIcons 
-              name={expandedSection === 'achievements' ? 'expand-less' : 'expand-more'} 
-              size={24} 
-              color="#6C7A9B" 
-            />
-          </View>
-
-          {expandedSection === 'achievements' && (
-            <View style={styles.sectionContent}>
-              <View style={styles.achievementsGrid}>
-                {achievements.map(achievement => (
-                  <View 
-                    key={achievement.id} 
-                    style={[
-                      styles.achievementCard,
-                      !achievement.unlocked && styles.achievementLocked
-                    ]}
-                  >
-                    <MaterialIcons 
-                      name={achievement.icon as any} 
-                      size={40} 
-                      color={achievement.unlocked ? achievement.color : '#94A3B8'} 
-                    />
-                    <Text style={[
-                      styles.achievementTitle,
-                      !achievement.unlocked && styles.achievementTitleLocked
-                    ]}>
-                      {String(achievement.title)}
-                    </Text>
-                    {achievement.unlocked && (
-                      <View style={styles.achievementBadge}>
-                        <MaterialIcons name="check-circle" size={16} color="#06D6A0" />
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* PARAMÈTRES */}
-        <TouchableOpacity
-          style={styles.sectionCard}
-          onPress={() => toggleSection('settings')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderLeft}>
-              <MaterialIcons name="settings" size={24} color="#8B5CF6" />
-              <Text style={styles.sectionTitle}>Paramètres</Text>
-            </View>
-            <MaterialIcons 
-              name={expandedSection === 'settings' ? 'expand-less' : 'expand-more'} 
-              size={24} 
-              color="#6C7A9B" 
-            />
-          </View>
-
-          {expandedSection === 'settings' && (
-            <View style={styles.sectionContent}>
-              <View style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <MaterialIcons name="notifications" size={20} color="#6C7A9B" />
-                  <Text style={styles.settingLabel}>Notifications</Text>
-                </View>
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={setNotificationsEnabled}
-                  trackColor={{ false: '#E2E8F0', true: '#FF6B35' }}
-                  thumbColor="#fff"
-                />
-              </View>
-
-              <View style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <MaterialIcons name="dark-mode" size={20} color="#6C7A9B" />
-                  <Text style={styles.settingLabel}>Mode sombre</Text>
-                </View>
-                <Switch
-                  value={darkModeEnabled}
-                  onValueChange={setDarkModeEnabled}
-                  trackColor={{ false: '#E2E8F0', true: '#FF6B35' }}
-                  thumbColor="#fff"
-                />
-              </View>
-
-              <TouchableOpacity style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <MaterialIcons name="lock" size={20} color="#6C7A9B" />
-                  <Text style={styles.settingLabel}>Changer le mot de passe</Text>
-                </View>
-                <MaterialIcons name="chevron-right" size={20} color="#6C7A9B" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <MaterialIcons name="language" size={20} color="#6C7A9B" />
-                  <Text style={styles.settingLabel}>Langue</Text>
-                </View>
-                <Text style={styles.settingValue}>Français</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* AIDE & SUPPORT */}
-        <TouchableOpacity
-          style={styles.sectionCard}
-          onPress={() => toggleSection('help')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderLeft}>
-              <MaterialIcons name="help-outline" size={24} color="#0EA5E9" />
-              <Text style={styles.sectionTitle}>Aide & Support</Text>
-            </View>
-            <MaterialIcons 
-              name={expandedSection === 'help' ? 'expand-less' : 'expand-more'} 
-              size={24} 
-              color="#6C7A9B" 
-            />
-          </View>
-
-          {expandedSection === 'help' && (
-            <View style={styles.sectionContent}>
-              <TouchableOpacity style={styles.helpItem}>
-                <MaterialIcons name="question-answer" size={20} color="#0EA5E9" />
-                <Text style={styles.helpText}>FAQ</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.helpItem}>
-                <MaterialIcons name="email" size={20} color="#0EA5E9" />
-                <Text style={styles.helpText}>Contacter le support</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.helpItem}>
-                <MaterialIcons name="policy" size={20} color="#0EA5E9" />
-                <Text style={styles.helpText}>Conditions d'utilisation</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.helpItem}>
-                <MaterialIcons name="privacy-tip" size={20} color="#0EA5E9" />
-                <Text style={styles.helpText}>Politique de confidentialité</Text>
-              </TouchableOpacity>
-
-              <View style={styles.versionInfo}>
-                <Text style={styles.versionText}>Version 1.0.0</Text>
-              </View>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* BOUTON DÉCONNEXION */}
-        <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
-          <LinearGradient
-            colors={['#EF476F', '#FF6B9D']}
-            style={styles.signOutGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <MaterialIcons name="logout" size={20} color="#fff" />
-            <Text style={styles.signOutText}>Se déconnecter</Text>
           </LinearGradient>
-        </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
+          {/* ===== STATS RAPIDES ===== */}
+          <View style={styles.quickStats}>
+            <View style={styles.quickStatCard}>
+              <LinearGradient colors={['#06D6A0', '#1BE7FF']} style={styles.quickStatGradient}>
+                <MaterialIcons name="login" size={24} color="#fff" />
+                <Text style={styles.quickStatNumber}>{String(accessStats.entries || 0)}</Text>
+                <Text style={styles.quickStatLabel}>Visites</Text>
+              </LinearGradient>
+            </View>
+
+            <View style={styles.quickStatCard}>
+              <LinearGradient colors={GRADIENTS.primary} style={styles.quickStatGradient}>
+                <MaterialIcons name="fitness-center" size={24} color="#fff" />
+                <Text style={styles.quickStatNumber}>{String(stats?.totalSessions || 0)}</Text>
+                <Text style={styles.quickStatLabel}>Sessions</Text>
+              </LinearGradient>
+            </View>
+
+            <View style={styles.quickStatCard}>
+              <LinearGradient colors={['#FFD23F', '#FFEB3B']} style={styles.quickStatGradient}>
+                <MaterialIcons name="local-fire-department" size={24} color="#fff" />
+                <Text style={styles.quickStatNumber}>{String(stats?.calories || 0)}</Text>
+                <Text style={styles.quickStatLabel}>Calories</Text>
+              </LinearGradient>
+            </View>
+          </View>
+
+          {/* ===== MENU SECTIONS ===== */}
+
+          {/* QR CODE */}
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => toggleSection('qr')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <MaterialIcons name="qr-code-2" size={24} color="#FF6B35" />
+                <Text style={styles.sectionTitle}>Mon QR Code</Text>
+              </View>
+              <MaterialIcons
+                name={expandedSection === 'qr' ? 'expand-less' : 'expand-more'}
+                size={24}
+                color="#6C7A9B"
+              />
+            </View>
+
+            {expandedSection === 'qr' && (
+              <View style={styles.sectionContent}>
+                <View style={styles.qrCodeContainer}>
+                  <View style={styles.qrCodeWrapper}>
+                    <QRCode
+                      value={profile?.qr_code || 'NO_QR'}
+                      size={200}
+                      backgroundColor="white"
+                      color="#FF6B35"
+                    />
+                  </View>
+                  <View style={styles.qrCodeInfo}>
+                    <MaterialIcons name="info-outline" size={16} color="#6C7A9B" />
+                    <Text style={styles.qrCodeText}>
+                      Scannez ce code à l'entrée/sortie
+                    </Text>
+                  </View>
+                  <Text style={styles.qrCodeValue}>{profile?.qr_code}</Text>
+                </View>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* STATISTIQUES DÉTAILLÉES */}
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => toggleSection('stats')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <MaterialIcons name="bar-chart" size={24} color="#6366F1" />
+                <Text style={styles.sectionTitle}>Statistiques détaillées</Text>
+              </View>
+              <MaterialIcons
+                name={expandedSection === 'stats' ? 'expand-less' : 'expand-more'}
+                size={24}
+                color="#6C7A9B"
+              />
+            </View>
+
+            {expandedSection === 'stats' && stats && (
+              <View style={styles.sectionContent}>
+                {/* Stats Grid */}
+                <View style={styles.statsGrid}>
+                  <View style={styles.miniStatCard}>
+                    <Text style={styles.miniStatValue}>{String(stats.totalSessions || 0)}</Text>
+                    <Text style={styles.miniStatLabel}>Sessions</Text>
+                  </View>
+                  <View style={styles.miniStatCard}>
+                    <Text style={styles.miniStatValue}>{String(stats.totalMinutes || 0)}</Text>
+                    <Text style={styles.miniStatLabel}>Minutes</Text>
+                  </View>
+                  <View style={styles.miniStatCard}>
+                    <Text style={styles.miniStatValue}>{String(stats.totalSets || 0)}</Text>
+                    <Text style={styles.miniStatLabel}>Séries</Text>
+                  </View>
+                  <View style={styles.miniStatCard}>
+                    <Text style={styles.miniStatValue}>{String(stats.calories || 0)}</Text>
+                    <Text style={styles.miniStatLabel}>Calories</Text>
+                  </View>
+                </View>
+
+                {/* Chart */}
+                <Text style={styles.chartTitle}>Activité hebdomadaire</Text>
+                <BarChart
+                  data={{
+                    labels: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
+                    datasets: [{ data: stats.weeklyData.length ? stats.weeklyData : [0, 0, 0, 0, 0, 0, 0] }],
+                  }}
+                  width={width - 64}
+                  height={200}
+                  chartConfig={chartConfig}
+                  style={styles.chart}
+                  yAxisLabel=""
+                  yAxisSuffix=" min"
+                  showBarTops={false}
+                  fromZero={true}
+                />
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* MES OBJECTIFS */}
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => toggleSection('goals')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <MaterialIcons name="flag" size={24} color="#06D6A0" />
+                <Text style={styles.sectionTitle}>Mes objectifs</Text>
+              </View>
+              <MaterialIcons
+                name={expandedSection === 'goals' ? 'expand-less' : 'expand-more'}
+                size={24}
+                color="#6C7A9B"
+              />
+            </View>
+
+            {expandedSection === 'goals' && (
+              <View style={styles.sectionContent}>
+                {goals.map(goal => {
+                  const progress = Math.min((goal.current / goal.target) * 100, 100)
+                  return (
+                    <View key={goal.id} style={styles.goalCard}>
+                      <View style={styles.goalHeader}>
+                        <LinearGradient colors={goal.color} style={styles.goalIcon}>
+                          <MaterialIcons name={goal.icon as any} size={20} color="#fff" />
+                        </LinearGradient>
+
+                        <View style={styles.goalInfo}>
+                          <Text style={styles.goalTitle}>{goal.title}</Text>
+                          <Text style={styles.goalProgress}>
+                            {String(goal.current)} / {String(goal.target)} {String(goal.unit)}
+                          </Text>
+                        </View>
+
+                        <Text style={styles.goalPercentage}>{Math.round(progress)}%</Text>
+                      </View>
+
+                      <View style={styles.progressBarContainer}>
+                        <LinearGradient
+                          colors={goal.color}
+                          style={[styles.progressBar, { width: `${progress}%` }]}
+                        />
+                      </View>
+                    </View>
+                  )
+                })}
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* BADGES & RÉALISATIONS */}
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => toggleSection('achievements')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <MaterialIcons name="emoji-events" size={24} color="#FFD700" />
+                <Text style={styles.sectionTitle}>Badges & Réalisations</Text>
+              </View>
+              <MaterialIcons
+                name={expandedSection === 'achievements' ? 'expand-less' : 'expand-more'}
+                size={24}
+                color="#6C7A9B"
+              />
+            </View>
+
+            {expandedSection === 'achievements' && (
+              <View style={styles.sectionContent}>
+                <View style={styles.achievementsGrid}>
+                  {achievements.map(achievement => (
+                    <View
+                      key={achievement.id}
+                      style={[
+                        styles.achievementCard,
+                        !achievement.unlocked && styles.achievementLocked
+                      ]}
+                    >
+                      <MaterialIcons
+                        name={achievement.icon as any}
+                        size={40}
+                        color={achievement.unlocked ? achievement.color : '#94A3B8'}
+                      />
+                      <Text style={[
+                        styles.achievementTitle,
+                        !achievement.unlocked && styles.achievementTitleLocked
+                      ]}>
+                        {String(achievement.title)}
+                      </Text>
+                      {achievement.unlocked && (
+                        <View style={styles.achievementBadge}>
+                          <MaterialIcons name="check-circle" size={16} color="#06D6A0" />
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* PARAMÈTRES */}
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => toggleSection('settings')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <MaterialIcons name="settings" size={24} color="#8B5CF6" />
+                <Text style={styles.sectionTitle}>Paramètres</Text>
+              </View>
+              <MaterialIcons
+                name={expandedSection === 'settings' ? 'expand-less' : 'expand-more'}
+                size={24}
+                color="#6C7A9B"
+              />
+            </View>
+
+            {expandedSection === 'settings' && (
+              <View style={styles.sectionContent}>
+                <View style={styles.settingRow}>
+                  <View style={styles.settingLeft}>
+                    <MaterialIcons name="notifications" size={20} color="#6C7A9B" />
+                    <Text style={styles.settingLabel}>Notifications</Text>
+                  </View>
+                  <Switch
+                    value={notificationsEnabled}
+                    onValueChange={setNotificationsEnabled}
+                    trackColor={{ false: '#E2E8F0', true: '#FF6B35' }}
+                    thumbColor="#fff"
+                  />
+                </View>
+
+                <View style={styles.settingRow}>
+                  <View style={styles.settingLeft}>
+                    <MaterialIcons name="dark-mode" size={20} color="#6C7A9B" />
+                    <Text style={styles.settingLabel}>Mode sombre</Text>
+                  </View>
+                  <Switch
+                    value={darkModeEnabled}
+                    onValueChange={setDarkModeEnabled}
+                    trackColor={{ false: '#E2E8F0', true: '#FF6B35' }}
+                    thumbColor="#fff"
+                  />
+                </View>
+
+                <TouchableOpacity style={styles.settingRow}>
+                  <View style={styles.settingLeft}>
+                    <MaterialIcons name="lock" size={20} color="#6C7A9B" />
+                    <Text style={styles.settingLabel}>Changer le mot de passe</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color="#6C7A9B" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.settingRow}>
+                  <View style={styles.settingLeft}>
+                    <MaterialIcons name="language" size={20} color="#6C7A9B" />
+                    <Text style={styles.settingLabel}>Langue</Text>
+                  </View>
+                  <Text style={styles.settingValue}>Français</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* AIDE & SUPPORT */}
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => toggleSection('help')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <MaterialIcons name="help-outline" size={24} color="#0EA5E9" />
+                <Text style={styles.sectionTitle}>Aide & Support</Text>
+              </View>
+              <MaterialIcons
+                name={expandedSection === 'help' ? 'expand-less' : 'expand-more'}
+                size={24}
+                color="#6C7A9B"
+              />
+            </View>
+
+            {expandedSection === 'help' && (
+              <View style={styles.sectionContent}>
+                <TouchableOpacity style={styles.helpItem}>
+                  <MaterialIcons name="question-answer" size={20} color="#0EA5E9" />
+                  <Text style={styles.helpText}>FAQ</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.helpItem}>
+                  <MaterialIcons name="email" size={20} color="#0EA5E9" />
+                  <Text style={styles.helpText}>Contacter le support</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.helpItem}>
+                  <MaterialIcons name="policy" size={20} color="#0EA5E9" />
+                  <Text style={styles.helpText}>Conditions d'utilisation</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.helpItem}>
+                  <MaterialIcons name="privacy-tip" size={20} color="#0EA5E9" />
+                  <Text style={styles.helpText}>Politique de confidentialité</Text>
+                </TouchableOpacity>
+
+                <View style={styles.versionInfo}>
+                  <Text style={styles.versionText}>Version 1.0.0</Text>
+                </View>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* BOUTON DÉCONNEXION */}
+          <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
+            <LinearGradient
+              colors={['#EF476F', '#FF6B9D']}
+              style={styles.signOutGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <MaterialIcons name="logout" size={20} color="#fff" />
+              <Text style={styles.signOutText}>Se déconnecter</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
       </View>
     </ImageBackground>
   )
@@ -646,6 +679,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#fff',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  editAvatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#FF6B35',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#1A1F3A',
   },
   avatarText: {
     fontSize: 36,

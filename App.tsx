@@ -10,6 +10,7 @@ import { useAuthStore } from './store/authStore'
 import { ThemeProvider as CustomThemeProvider } from './contexts/ThemeContext'
 
 // Member Screens
+import WelcomeScreen from './screens/WelcomeScreen'
 import LoginScreen from './screens/LoginScreen'
 import RegisterScreen from './screens/RegisterScreen'
 import DashboardScreen from './screens/DashboardScreen'
@@ -32,21 +33,21 @@ const COLORS = {
   success: '#06D6A0',        // Vert success
   warning: '#FFD23F',        // Jaune warning
   danger: '#EF476F',         // Rouge danger
-  
+
   // Backgrounds
   background: '#0A0E27',     // Bleu très sombre (dark mode)
   surface: '#1A1F3A',        // Bleu foncé pour cards
   surfaceLight: '#252B4A',   // Bleu moyen
-  
+
   // Text
   textPrimary: '#FFFFFF',
   textSecondary: '#B8C1EC',
   textMuted: '#6C7A9B',
-  
+
   // Tab bar
   tabActive: '#FF6B35',
   tabInactive: '#6C7A9B',
-  
+
   // Status
   online: '#06D6A0',
   offline: '#EF476F',
@@ -73,7 +74,7 @@ const TabIcon = ({ name, focused }: { name: string; focused: boolean }) => {
   const iconName = TAB_ICONS[name] || 'circle'
   const color = focused ? COLORS.tabActive : COLORS.tabInactive
   const size = focused ? 28 : 24
-  
+
   return (
     <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
       <MaterialIcons name={iconName as any} size={size} color={color} />
@@ -164,43 +165,43 @@ function TabNavigator() {
         tabBarShowLabel: true,
       })}
     >
-      <Tab.Screen 
-        name="Dashboard" 
+      <Tab.Screen
+        name="Dashboard"
         component={DashboardScreen}
-        options={{ 
+        options={{
           title: 'Accueil',
           headerShown: true,
           tabBarLabel: 'Accueil',
         }}
       />
-      <Tab.Screen 
-        name="Machines" 
+      <Tab.Screen
+        name="Machines"
         component={MachinesScreen}
-        options={{ 
+        options={{
           title: 'Équipements',
           tabBarLabel: 'Machines',
         }}
       />
-      <Tab.Screen 
-        name="Scanner" 
+      <Tab.Screen
+        name="Scanner"
         component={ScannerScreen}
-        options={{ 
+        options={{
           title: 'Scanner QR',
           tabBarLabel: 'Scanner',
         }}
       />
-      <Tab.Screen 
-        name="Schedule" 
+      <Tab.Screen
+        name="Schedule"
         component={ScheduleScreen}
-        options={{ 
+        options={{
           title: 'Planning',
           tabBarLabel: 'Planning',
         }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
-        options={{ 
+        options={{
           title: 'Mon Profil',
           tabBarLabel: 'Profil',
         }}
@@ -233,6 +234,7 @@ export default function App() {
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             {!session ? (
               <>
+                <Stack.Screen name="Welcome" component={WelcomeScreen} />
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="Register" component={RegisterScreen} />
               </>

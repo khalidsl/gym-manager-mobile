@@ -101,7 +101,7 @@ const MOCK_MEMBERS: Member[] = [
 export const getMembers = async (): Promise<Member[]> => {
   try {
     console.log('🔍 Tentative de récupération des membres depuis Supabase...')
-    
+
     // D'abord, essayer de récupérer TOUS les profils pour voir ce qu'il y a
     let { data: allProfiles, error: allProfilesError } = await supabase
       .from('profiles')
@@ -116,11 +116,11 @@ export const getMembers = async (): Promise<Member[]> => {
 
     console.log('✅ TOUS les profils reçus de Supabase:', allProfiles?.length || 0)
     if (allProfiles && allProfiles.length > 0) {
-      console.log('📋 Profils détaillés:', allProfiles.map(p => ({ 
-        id: p.id, 
-        full_name: p.full_name, 
+      console.log('📋 Profils détaillés:', allProfiles.map(p => ({
+        id: p.id,
+        full_name: p.full_name,
         email: p.email,
-        role: p.role 
+        role: p.role
       })))
     }
 
@@ -130,7 +130,7 @@ export const getMembers = async (): Promise<Member[]> => {
 
     if (!memberProfiles || memberProfiles.length === 0) {
       console.log('⚠️ Aucun membre trouvé, utilisation des données de fallback...')
-      
+
       // Mais affichons quand même tous les profils disponibles pour debug
       if (allProfiles && allProfiles.length > 0) {
         console.log('🔧 Utilisation de tous les profils disponibles comme membres pour test...')
@@ -151,7 +151,7 @@ export const getMembers = async (): Promise<Member[]> => {
         }))
         return transformedAllData
       }
-      
+
       return MOCK_MEMBERS
     }
 
@@ -170,7 +170,7 @@ export const getMembers = async (): Promise<Member[]> => {
     const transformedData = memberProfiles.map(profile => {
       // Trouver l'abonnement correspondant à ce profil
       const membership = memberships?.find(m => m.user_id === profile.id)
-      
+
       return {
         id: profile.id,
         full_name: profile.full_name || profile.email,
@@ -246,14 +246,14 @@ export const searchMembers = async (query: string): Promise<Member[]> => {
         `)
         .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
         .order('full_name', { ascending: true })
-      
+
       data = result.data
       error = result.error
     }
 
     if (error) {
       console.error('Erreur lors de la recherche de membres:', error)
-      return MOCK_MEMBERS.filter(member => 
+      return MOCK_MEMBERS.filter(member =>
         member.full_name.toLowerCase().includes(query.toLowerCase()) ||
         member.email.toLowerCase().includes(query.toLowerCase())
       )
@@ -271,7 +271,7 @@ export const searchMembers = async (query: string): Promise<Member[]> => {
     }))
   } catch (error) {
     console.error('Erreur searchMembers:', error)
-    return MOCK_MEMBERS.filter(member => 
+    return MOCK_MEMBERS.filter(member =>
       member.full_name.toLowerCase().includes(query.toLowerCase()) ||
       member.email.toLowerCase().includes(query.toLowerCase())
     )
@@ -312,7 +312,7 @@ export const deleteMember = async (memberId: string): Promise<boolean> => {
 
 // Mettre à jour le statut d'un abonnement
 export const updateMembershipStatus = async (
-  memberId: string, 
+  memberId: string,
   status: 'active' | 'expired' | 'suspended'
 ): Promise<boolean> => {
   try {
@@ -338,31 +338,70 @@ export const addMember = async (memberData: {
   full_name: string
   email: string
   phone?: string
+  password?: string
   membershipType: 'basic' | 'premium' | 'vip'
 }): Promise<boolean> => {
   try {
     console.log('🆕 Ajout d\'un nouveau membre...', memberData)
-    
-    // Créer le profil utilisateur
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .insert([
-        {
-          full_name: memberData.full_name,
-          email: memberData.email,
-          phone: memberData.phone || null,
-          role: 'member'
-        }
-      ])
-      .select()
-      .single()
 
-    if (profileError) {
-      console.error('❌ Erreur lors de la création du profil:', profileError)
+    // 1. URL & Key for direct fetch bypass (avoids logging the Admin out)
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || ''
+    const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ URL ou Clé Supabase manquante')
       return false
     }
 
-    // Créer l'abonnement
+    // 2. Créer l'utilisateur Auth via l'API Rest de Supabase (pour contourner le fait
+    // que supabase.auth.signUp() déconnecterait l'admin actuel en mettant à jour la session locale)
+    const tempPassword = memberData.password || (Math.random().toString(36).slice(-10) + 'A1!')
+
+    const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+      method: 'POST',
+      headers: {
+        'apikey': supabaseKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: memberData.email,
+        password: tempPassword,
+        data: {
+          full_name: memberData.full_name,
+        }
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok || !data.user?.id) {
+      console.error('❌ Erreur création auth:', data)
+      return false
+    }
+
+    const userId = data.user.id
+
+    // 3. Mettre à jour (upsert) le profil pour éviter l'erreur "duplicate key" 
+    // car Supabase a souvent un Trigger SQL qui crée une ligne vide automatiquement dans `profiles`.
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert([
+        {
+          id: userId,
+          full_name: memberData.full_name,
+          email: memberData.email,
+          phone: memberData.phone || null,
+          role: 'member',
+          qr_code: `qr_${userId}` // Requis par la base de données
+        }
+      ])
+
+    if (profileError) {
+      console.error('❌ Erreur création du profil:', profileError)
+      return false
+    }
+
+    // 4. Créer l'abonnement
     const startDate = new Date().toISOString()
     const endDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 an
 
@@ -370,7 +409,7 @@ export const addMember = async (memberData: {
       .from('memberships')
       .insert([
         {
-          user_id: profile.id,
+          user_id: userId,
           type: memberData.membershipType,
           status: 'active',
           start_date: startDate,
@@ -379,16 +418,14 @@ export const addMember = async (memberData: {
       ])
 
     if (membershipError) {
-      console.error('❌ Erreur lors de la création de l\'abonnement:', membershipError)
-      // Supprimer le profil créé si l'abonnement échoue
-      await supabase.from('profiles').delete().eq('id', profile.id)
+      console.error('❌ Erreur création abonnement:', membershipError)
       return false
     }
 
-    console.log('✅ Membre ajouté avec succès')
+    console.log('✅ Membre ajouté avec succès (Auth + Profil + Abo). Mdp temp:', tempPassword)
     return true
   } catch (error) {
-    console.error('❌ Erreur addMember:', error)
+    console.error('❌ Erreur requêtes combinées addMember:', error)
     return false
   }
 }
@@ -404,7 +441,7 @@ export const updateMember = async (memberData: {
 }): Promise<boolean> => {
   try {
     console.log('✏️ Mise à jour du membre...', memberData)
-    
+
     // Mettre à jour le profil
     const { error: profileError } = await supabase
       .from('profiles')
@@ -488,7 +525,7 @@ export const getMembersStats = async () => {
     const activeCount = MOCK_MEMBERS.filter(m => m.membership?.status === 'active').length
     const expiredCount = MOCK_MEMBERS.filter(m => m.membership?.status === 'expired').length
     const suspendedCount = MOCK_MEMBERS.filter(m => m.membership?.status === 'suspended').length
-    
+
     return {
       total: MOCK_MEMBERS.length,
       active: activeCount,

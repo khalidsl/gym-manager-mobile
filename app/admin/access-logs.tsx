@@ -159,84 +159,56 @@ export default function AccessLogsScreen() {
     const lastAccessTime = item.last_access || new Date().toISOString();
     const duration = Math.round((Date.now() - new Date(lastAccessTime).getTime()) / (1000 * 60));
     const memberName = `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.email || 'Membre inconnu';
-    
-    // Calculer la durée formatée
+    const initial = (item.first_name || item.last_name) ? (item.first_name?.[0] || item.last_name?.[0] || '🧑‍💼') : '🧑‍💼';
+    const badgeColor = item.membership_status === 'vip' ? COLORS.danger : item.membership_status === 'premium' ? COLORS.accent : COLORS.primary;
+    const badgeLabel = item.membership_status === 'vip' ? 'VIP' : item.membership_status === 'premium' ? 'Premium' : 'Basic';
+    // Calcul durée formatée
     const formatDuration = (minutes: number) => {
-      if (minutes < 60) {
-        return `${minutes}min`;
-      } else {
-        const hours = Math.floor(minutes / 60);
-        const remainingMinutes = minutes % 60;
-        return `${hours}h${remainingMinutes > 0 ? ` ${remainingMinutes}min` : ''}`;
-      }
+      if (minutes < 60) return `${minutes}min`;
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return `${hours}h${remainingMinutes > 0 ? ` ${remainingMinutes}min` : ''}`;
     };
-    
-    // Déterminer la couleur selon la durée
     const getDurationColor = (minutes: number) => {
       if (minutes < 30) return COLORS.success;
       if (minutes < 120) return COLORS.primary;
       if (minutes < 240) return COLORS.warning;
       return COLORS.danger;
     };
-    
     return (
-      <View style={styles.enhancedMemberCard}>
-        <BlurView intensity={80} tint="dark" style={styles.memberBlur}>
+      <View style={[styles.enhancedMemberCard, {backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: badgeColor}]}> 
+        <BlurView intensity={60} tint="dark" style={styles.memberBlur}>
           <View style={styles.memberCardContent}>
-            {/* Header avec nom et statut */}
-            <View style={styles.memberCardHeader}>
-              <View style={styles.memberIdentity}>
-                <View style={[styles.statusDot, { backgroundColor: COLORS.success }]} />
-                <View style={styles.memberNameSection}>
-                  <Text style={styles.enhancedMemberName}>
-                    {String(memberName)}
-                  </Text>
-                  <Text style={styles.memberEmail}>
-                    {String(item.email || 'Email non disponible')}
-                  </Text>
+            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 12}}>
+              {/* Avatar initial */}
+              <View style={{width: 48, height: 48, borderRadius: 24, backgroundColor: badgeColor+'33', alignItems: 'center', justifyContent: 'center', marginRight: 16, borderWidth: 2, borderColor: badgeColor}}>
+                <Text style={{fontSize: 22, fontWeight: 'bold', color: badgeColor}}>{initial.toUpperCase()}</Text>
+              </View>
+              <View style={{flex: 1}}>
+                <Text style={[styles.enhancedMemberName, {marginBottom: 0}]}>{memberName}</Text>
+                <Text style={[styles.memberEmail, {fontSize: 12, marginTop: 2}]}>{item.email}</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
+                  <View style={{backgroundColor: badgeColor, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginRight: 8}}>
+                    <Text style={{color: '#fff', fontSize: 11, fontWeight: 'bold'}}>{badgeLabel}</Text>
+                  </View>
+                  <Text style={{fontSize: 11, color: COLORS.textSecondary}}>Fin: {item.membership_end_date ? formatDate(item.membership_end_date) : 'N/A'}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.memberOptionsButton}>
-                <MaterialIcons name="more-vert" size={20} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Informations d'accès */}
-            <View style={styles.accessInfoSection}>
-              <View style={styles.accessInfoRow}>
-                <MaterialIcons name="schedule" size={16} color={COLORS.textSecondary} />
-                <Text style={styles.accessInfoLabel}>Entrée:</Text>
-                <Text style={styles.accessInfoValue}>
-                  {String(formatTime(lastAccessTime))}
-                </Text>
-              </View>
-              <View style={styles.accessInfoRow}>
-                <MaterialIcons name="timer" size={16} color={getDurationColor(duration)} />
-                <Text style={styles.accessInfoLabel}>Durée:</Text>
-                <Text style={[styles.durationValue, { color: getDurationColor(duration) }]}>
-                  {String(duration >= 0 ? formatDuration(duration) : 'Récent')}
-                </Text>
+              {/* Durée */}
+              <View style={{alignItems: 'center', marginLeft: 8}}>
+                <MaterialIcons name="timer" size={20} color={getDurationColor(duration)} />
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: getDurationColor(duration)}}>{formatDuration(duration)}</Text>
               </View>
             </View>
-            
-            {/* Barre de progression pour la durée */}
-            <View style={styles.durationProgressContainer}>
-              <View style={styles.durationProgressBar}>
-                <View 
-                  style={[
-                    styles.durationProgressFill,
-                    { 
-                      width: `${Math.min((duration / 300) * 100, 100)}%`,
-                      backgroundColor: getDurationColor(duration)
-                    }
-                  ]}
-                />
+            {/* Barre de progression */}
+            <View style={{marginBottom: 12, marginTop: -8}}>
+              <View style={{height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden'}}>
+                <View style={{height: 8, borderRadius: 4, width: `${Math.min((duration / 300) * 100, 100)}%`, backgroundColor: getDurationColor(duration)}} />
               </View>
-              <Text style={styles.durationProgressText}>
-                {String(duration < 300 ? 'Séance normale' : duration < 480 ? 'Séance longue' : 'Très longue séance')}
+              <Text style={{fontSize: 11, color: COLORS.textSecondary, marginTop: 2, fontStyle: 'italic'}}>
+                {duration < 300 ? 'Séance normale' : duration < 480 ? 'Séance longue' : 'Très longue séance'}
               </Text>
             </View>
-            
             {/* Actions rapides */}
             <View style={styles.memberActions}>
               <TouchableOpacity style={styles.actionButton}>
@@ -255,8 +227,8 @@ export default function AccessLogsScreen() {
           </View>
         </BlurView>
       </View>
-    )
-  }
+    );
+  } 
 
   const renderTabButton = (tab: 'today' | 'all' | 'inside' | 'entries', label: string, icon: string) => (
     <TouchableOpacity
@@ -289,35 +261,37 @@ export default function AccessLogsScreen() {
 
     if (activeTab === 'inside') {
       // Calculer les statistiques des membres présents
-      const avgDuration = membersInside.length > 0 
-        ? Math.round(membersInside.reduce((sum, member) => {
-            const lastAccessTime = member.last_access || new Date().toISOString();
-            const duration = Math.round((Date.now() - new Date(lastAccessTime).getTime()) / (1000 * 60));
-            return sum + duration;
-          }, 0) / membersInside.length)
-        : 0;
-      
-      const longestSession = membersInside.length > 0
-        ? Math.max(...membersInside.map(member => {
-            const lastAccessTime = member.last_access || new Date().toISOString();
-            return Math.round((Date.now() - new Date(lastAccessTime).getTime()) / (1000 * 60));
-          }))
-        : 0;
-      
+      const now = Date.now();
+      const durations = membersInside.map(member => {
+        const lastAccessTime = member.last_access || new Date().toISOString();
+        return Math.round((now - new Date(lastAccessTime).getTime()) / (1000 * 60));
+      });
+      const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+      const longestSession = durations.length > 0 ? Math.max(...durations) : 0;
+
+      // Tri décroissant par durée (plus longtemps présent en haut)
+      const sortedMembers = [...membersInside].sort((a, b) => {
+        const da = a.last_access ? new Date(a.last_access).getTime() : 0;
+        const db = b.last_access ? new Date(b.last_access).getTime() : 0;
+        return (da - db);
+      });
+
       return (
         <View style={styles.membersContainer}>
           {/* En-tête avec statistiques */}
           <View style={styles.membersHeader}>
             <Text style={styles.sectionTitle}>
-              Membres Actifs ({String(membersInside.length)})
+              <MaterialIcons name="people" size={22} color={COLORS.primary} /> Membres présents <Text style={{color: COLORS.primary}}>({membersInside.length})</Text>
             </Text>
             <View style={styles.membersStatsRow}>
               <View style={styles.memberStatCard}>
-                <Text style={styles.memberStatNumber}>{String(avgDuration)}min</Text>
+                <MaterialIcons name="timer" size={16} color={COLORS.primary} />
+                <Text style={styles.memberStatNumber}>{avgDuration}min</Text>
                 <Text style={styles.memberStatLabel}>Durée moy.</Text>
               </View>
               <View style={styles.memberStatCard}>
-                <Text style={styles.memberStatNumber}>{String(longestSession)}min</Text>
+                <MaterialIcons name="trending-up" size={16} color={COLORS.warning} />
+                <Text style={styles.memberStatNumber}>{longestSession}min</Text>
                 <Text style={styles.memberStatLabel}>Plus longue</Text>
               </View>
               <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
@@ -325,7 +299,7 @@ export default function AccessLogsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          
+
           {membersInside.length === 0 ? (
             <View style={styles.enhancedEmptyState}>
               <BlurView intensity={60} tint="dark" style={styles.emptyStateBlur}>
@@ -340,13 +314,13 @@ export default function AccessLogsScreen() {
               </BlurView>
             </View>
           ) : (
-            <View style={styles.membersListContent}>
-              {membersInside.map((item) => (
-                <View key={item.id}>
-                  {renderMemberInsideItem({ item })}
-                </View>
-              ))}
-            </View>
+            <FlatList
+              data={sortedMembers}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.membersListContent}
+              renderItem={({ item }) => renderMemberInsideItem({ item })}
+              showsVerticalScrollIndicator={false}
+            />
           )}
         </View>
       )
@@ -390,11 +364,46 @@ export default function AccessLogsScreen() {
     )
   }
 
+  // Si onglet "Présents" : FlatList plein écran, sinon ScrollView classique
+  if (activeTab === 'inside') {
+    return (
+      <LinearGradient colors={[COLORS.background, '#1A1A2E']} style={styles.container}>
+        {/* Stats Header */}
+        <View style={styles.statsHeader}>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{String(stats.todayEntries || 0)}</Text>
+              <Text style={styles.statLabel}>Entrées</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{String(stats.todayExits || 0)}</Text>
+              <Text style={styles.statLabel}>Sorties</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{String(stats.currentlyInside || 0)}</Text>
+              <Text style={styles.statLabel}>Présents</Text>
+            </View>
+          </View>
+        </View>
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.tabsRow}>
+              {renderTabButton('today', "Aujourd'hui", 'today')}
+              {renderTabButton('entries', 'Entrées', 'login')}
+              {renderTabButton('all', 'Tout', 'list')}
+              {renderTabButton('inside', 'Présents', 'people')}
+            </View>
+          </ScrollView>
+        </View>
+        {/* Content plein écran sans ScrollView parent */}
+        <View style={styles.contentContainer}>{renderContent()}</View>
+      </LinearGradient>
+    );
+  }
+  // Autres onglets : ScrollView classique
   return (
-    <LinearGradient
-      colors={[COLORS.background, '#1A1A2E']}
-      style={styles.container}
-    >
+    <LinearGradient colors={[COLORS.background, '#1A1A2E']} style={styles.container}>
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -422,7 +431,6 @@ export default function AccessLogsScreen() {
             </View>
           </View>
         </View>
-
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -434,14 +442,11 @@ export default function AccessLogsScreen() {
             </View>
           </ScrollView>
         </View>
-
         {/* Content */}
-        <View style={styles.contentContainer}>
-          {renderContent()}
-        </View>
+        <View style={styles.contentContainer}>{renderContent()}</View>
       </ScrollView>
     </LinearGradient>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -839,7 +844,7 @@ const styles = StyleSheet.create({
   methodBadge: {
     fontSize: 11,
     color: COLORS.textSecondary,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgb(255, 0, 0)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,

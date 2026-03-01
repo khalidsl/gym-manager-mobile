@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Alert, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
   TouchableOpacity,
   ScrollView,
   RefreshControl,
@@ -53,7 +53,7 @@ export default function ScannerScreen() {
         getTodayAccessLogs(),
         getMembersInside()
       ])
-      
+
       setStats(statsData)
       setRecentLogs(logsData.slice(0, 5)) // 5 derniers logs
       setMembersInside(insideData)
@@ -76,10 +76,10 @@ export default function ScannerScreen() {
     message: string;
   }) => {
     console.log('✅ Scan réussi:', result)
-    
+
     // Recharger les données après un scan réussi
     await loadData()
-    
+
     // Fermer le scanner
     setScannerVisible(false)
   }
@@ -88,61 +88,29 @@ export default function ScannerScreen() {
     const now = new Date()
     const logTime = new Date(timestamp)
     const diffInMinutes = Math.floor((now.getTime() - logTime.getTime()) / (1000 * 60))
-    
+
     if (diffInMinutes < 1) return 'À l\'instant'
     if (diffInMinutes < 60) return `Il y a ${diffInMinutes}min`
-    
+
     const diffInHours = Math.floor(diffInMinutes / 60)
     if (diffInHours < 24) return `Il y a ${diffInHours}h`
-    
-    return logTime.toLocaleDateString('fr-FR', { 
-      day: 'numeric', 
+
+    return logTime.toLocaleDateString('fr-FR', {
+      day: 'numeric',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit'
     })
   }
 
-  const StatCard = ({ 
-    title, 
-    value, 
-    icon, 
-    color 
-  }: { 
-    title: string
-    value: string | number
-    icon: string
-    color: string
-  }) => (
-    <View style={styles.statCard}>
-      <BlurView intensity={80} tint="dark" style={styles.statBlur}>
-        <LinearGradient
-          colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']}
-          style={styles.statGradient}
-        >
-          <View style={styles.statHeader}>
-            <LinearGradient
-              colors={[`${color}30`, `${color}10`]}
-              style={styles.statIconContainer}
-            >
-              <MaterialIcons name={icon as any} size={20} color={color} />
-            </LinearGradient>
-          </View>
-          <Text style={styles.statValue}>{value}</Text>
-          <Text style={styles.statTitle}>{title}</Text>
-        </LinearGradient>
-      </BlurView>
-    </View>
-  )
-
   return (
     <LinearGradient colors={[COLORS.background, COLORS.surface]} style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={COLORS.primary}
           />
@@ -153,11 +121,17 @@ export default function ScannerScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Scanner d'Accès</Text>
           <Text style={styles.subtitle}>Gestion des entrées et sorties QR</Text>
+          <View style={styles.dateLabelContainer}>
+            <MaterialIcons name="event" size={16} color={COLORS.primary} />
+            <Text style={styles.dateLabelText}>
+              {new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}
+            </Text>
+          </View>
         </View>
 
         {/* Main Scanner Button */}
         <View style={styles.scannerButtonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.scannerButton}
             onPress={() => setScannerVisible(true)}
             activeOpacity={0.8}
@@ -175,36 +149,7 @@ export default function ScannerScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Stats */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Statistiques Aujourd'hui</Text>
-          <View style={styles.statsGrid}>
-            <StatCard
-              title="Entrées"
-              value={stats.todayEntries || 0}
-              icon="login"
-              color={COLORS.success}
-            />
-            <StatCard
-              title="Sorties"
-              value={stats.todayExits || 0}
-              icon="logout"
-              color={COLORS.warning}
-            />
-            <StatCard
-              title="Présents"
-              value={stats.currentlyInside}
-              icon="people"
-              color={COLORS.primary}
-            />
-            <StatCard
-              title="Pointe"
-              value={stats.peakHour}
-              icon="schedule"
-              color={COLORS.secondary}
-            />
-          </View>
-        </View>
+
 
         {/* Membres Présents */}
         <View style={styles.section}>
@@ -213,7 +158,7 @@ export default function ScannerScreen() {
               Membres Présents ({String(membersInside.length)})
             </Text>
           </View>
-          
+
           {loading ? (
             <View style={styles.loadingCard}>
               <Text style={styles.loadingText}>Chargement...</Text>
@@ -225,10 +170,10 @@ export default function ScannerScreen() {
                   <BlurView intensity={80} tint="dark" style={styles.memberBlur}>
                     <View style={styles.memberItem}>
                       <View style={[styles.presenceIcon, { backgroundColor: COLORS.success + '30' }]}>
-                        <MaterialIcons 
-                          name="person" 
-                          size={16} 
-                          color={COLORS.success} 
+                        <MaterialIcons
+                          name="person"
+                          size={16}
+                          color={COLORS.success}
                         />
                       </View>
                       <View style={styles.memberInfo}>
@@ -263,7 +208,7 @@ export default function ScannerScreen() {
         {/* Activité Récente */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activité Récente</Text>
-          
+
           {loading ? (
             <View style={styles.loadingCard}>
               <Text style={styles.loadingText}>Chargement...</Text>
@@ -273,16 +218,16 @@ export default function ScannerScreen() {
               {recentLogs.map((log) => {
                 const isEntry = log.action === 'entry'
                 const actionColor = isEntry ? COLORS.success : COLORS.warning
-                
+
                 return (
                   <View key={log.id} style={styles.activityCard}>
                     <BlurView intensity={80} tint="dark" style={styles.activityBlur}>
                       <View style={styles.activityItem}>
                         <View style={[styles.activityIcon, { backgroundColor: actionColor + '30' }]}>
-                          <MaterialIcons 
-                            name={isEntry ? 'login' : 'logout'} 
-                            size={16} 
-                            color={actionColor} 
+                          <MaterialIcons
+                            name={isEntry ? 'login' : 'logout'}
+                            size={16}
+                            color={actionColor}
                           />
                         </View>
                         <View style={styles.activityContent}>
@@ -343,6 +288,25 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 8,
   },
+  dateLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 6,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+  },
+  dateLabelText: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
   scannerButtonContainer: {
     paddingHorizontal: 24,
     marginBottom: 32,
@@ -372,53 +336,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 4,
-  },
-  statsSection: {
-    marginBottom: 32,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: '45%',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  statBlur: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  statGradient: {
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-  },
-  statHeader: {
-    marginBottom: 12,
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  statTitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
   },
   section: {
     paddingHorizontal: 24,

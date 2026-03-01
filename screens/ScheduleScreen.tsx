@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  RefreshControl, 
-  Alert, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  Alert,
+  TouchableOpacity,
   ImageBackground,
   Animated,
   LayoutAnimation,
   Platform,
   UIManager,
+  ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
@@ -42,61 +43,21 @@ interface Booking {
   created_at: string
 }
 
-// ==================== ANIMATED LOADING ====================
-const AnimatedLoading = () => {
-  const spinAnim = useRef(new Animated.Value(0)).current
-  const pulseAnim = useRef(new Animated.Value(1)).current
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(spinAnim, {
-        toValue: 1,
-        duration: 1500,
-        useNativeDriver: true,
-      })
-    ).start()
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.2,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start()
-  }, [])
-
-  const spin = spinAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  })
-
+// ==================== SIMPLE LOADING ====================
+const SimpleLoading = () => {
   return (
     <View style={styles.loadingContainer}>
-      <Animated.View style={{ transform: [{ rotate: spin }, { scale: pulseAnim }] }}>
-        <LinearGradient
-          colors={['#6C63FF', '#4C51BF']}
-          style={styles.loadingGradient}
-        >
-          <MaterialIcons name="event" size={48} color="#fff" />
-        </LinearGradient>
-      </Animated.View>
-      <Text style={styles.loadingText}>Chargement du planning...</Text>
+      <ActivityIndicator size="large" color="#6C63FF" />
+      <Text style={[styles.loadingText, { marginTop: 12 }]}>Chargement du planning...</Text>
     </View>
   )
 }
 
 // ==================== ANIMATED CLASS CARD ====================
-const AnimatedClassCard = ({ 
-  classItem, 
-  booked, 
-  onBook, 
+const AnimatedClassCard = ({
+  classItem,
+  booked,
+  onBook,
   onCancel,
   index,
 }: any) => {
@@ -149,7 +110,7 @@ const AnimatedClassCard = ({
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    
+
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 0.95,
@@ -181,7 +142,7 @@ const AnimatedClassCard = ({
     >
       <BlurView intensity={booked ? 90 : 70} tint="light" style={styles.classCardBlur}>
         <LinearGradient
-          colors={booked 
+          colors={booked
             ? ['rgba(16, 185, 129, 0.1)', 'rgba(16, 185, 129, 0.05)']
             : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']
           }
@@ -197,7 +158,7 @@ const AnimatedClassCard = ({
                 </Text>
               </View>
             </View>
-            
+
             {booked && (
               <Animated.View style={[
                 styles.bookedBadge,
@@ -225,7 +186,7 @@ const AnimatedClassCard = ({
                 {String(classItem.start_time)} - {String(classItem.end_time)}
               </Text>
             </View>
-            
+
             <View style={styles.detailItem}>
               <LinearGradient
                 colors={['#F59E0B15', '#F59E0B05']}
@@ -243,7 +204,7 @@ const AnimatedClassCard = ({
             style={styles.actionButtonContainer}
           >
             <LinearGradient
-              colors={booked 
+              colors={booked
                 ? ['#EF4444', '#DC2626']
                 : ['#6C63FF', '#4C51BF']
               }
@@ -251,10 +212,10 @@ const AnimatedClassCard = ({
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <MaterialIcons 
-                name={booked ? 'cancel' : 'event-available'} 
-                size={18} 
-                color="#fff" 
+              <MaterialIcons
+                name={booked ? 'cancel' : 'event-available'}
+                size={18}
+                color="#fff"
               />
               <Text style={styles.actionButtonText}>
                 {booked ? 'Annuler' : 'Réserver'}
@@ -280,7 +241,7 @@ const DayHeader = ({ day, dayName, color, icon }: any) => {
   }, [])
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.dayHeaderContainer,
         { transform: [{ scale: scaleAnim }] }
@@ -349,13 +310,13 @@ export default function ScheduleScreen() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
-  
+
   const headerAnim = useRef(new Animated.Value(0)).current
   const statsAnim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     loadData()
-    
+
     // Animations d'entrée
     Animated.stagger(200, [
       Animated.timing(headerAnim, {
@@ -430,8 +391,8 @@ export default function ScheduleScreen() {
 
   const isBooked = (classId: string, targetDate?: string) => {
     if (targetDate) {
-      return bookings.some(b => 
-        b.class_id === classId && 
+      return bookings.some(b =>
+        b.class_id === classId &&
         b.booking_date === targetDate &&
         b.status === 'confirmed'
       )
@@ -462,7 +423,7 @@ export default function ScheduleScreen() {
       const today = new Date()
       const currentDay = today.getDay() // 0 = Dimanche, 1 = Lundi, etc.
       const targetDay = classItem.day_of_week
-      
+
       let daysUntilClass = targetDay - currentDay
       if (daysUntilClass < 0) {
         daysUntilClass += 7 // Semaine suivante si le jour est déjà passé
@@ -471,12 +432,12 @@ export default function ScheduleScreen() {
         const [hours, minutes] = classItem.start_time.split(':').map(Number)
         const classTime = new Date(today)
         classTime.setHours(hours, minutes, 0, 0)
-        
+
         if (today > classTime) {
           daysUntilClass = 7 // Prendre la semaine suivante si l'heure est passée
         }
       }
-      
+
       const bookingDate = new Date(today)
       bookingDate.setDate(today.getDate() + daysUntilClass)
       bookingDate.setHours(0, 0, 0, 0) // Reset time to avoid timezone issues
@@ -577,7 +538,7 @@ export default function ScheduleScreen() {
   const totalClasses = classes.length
 
   if (loading) {
-    return <AnimatedLoading />
+    return <SimpleLoading />
   }
 
   const headerTranslate = headerAnim.interpolate({
@@ -696,7 +657,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: 40,
   },
-  
+
   // Loading
   loadingContainer: {
     flex: 1,

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -48,12 +48,13 @@ export default function AdminMembers() {
     expired: 0,
     suspended: 0
   })
-  
+
   // États pour les formulaires
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
     phone: '',
+    password: '',
     membershipType: 'basic' as 'basic' | 'premium' | 'vip',
     membershipStatus: 'active' as 'active' | 'expired' | 'suspended'
   })
@@ -98,7 +99,7 @@ export default function AdminMembers() {
 
     // Filtrage par recherche
     if (searchQuery) {
-      filtered = filtered.filter(member => 
+      filtered = filtered.filter(member =>
         member.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (member.phone && member.phone.includes(searchQuery))
@@ -177,8 +178,8 @@ export default function AdminMembers() {
     const success = await updateMembershipStatus(memberId, newStatus)
     if (success) {
       // Mettre à jour localement
-      setMembers(members.map(m => 
-        m.id === memberId && m.membership 
+      setMembers(members.map(m =>
+        m.id === memberId && m.membership
           ? { ...m, membership: { ...m.membership, status: newStatus } }
           : m
       ))
@@ -192,12 +193,13 @@ export default function AdminMembers() {
   // ============================================
   // GESTION DES FORMULAIRES
   // ============================================
-  
+
   const resetForm = () => {
     setFormData({
       full_name: '',
       email: '',
       phone: '',
+      password: '',
       membershipType: 'basic',
       membershipStatus: 'active'
     })
@@ -213,6 +215,7 @@ export default function AdminMembers() {
       full_name: member.full_name,
       email: member.email,
       phone: member.phone || '',
+      password: '', // On n'édite pas le mot de passe ici
       membershipType: member.membership?.type || 'basic',
       membershipStatus: member.membership?.status || 'active'
     })
@@ -240,6 +243,7 @@ export default function AdminMembers() {
         full_name: formData.full_name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined,
+        password: formData.password.trim() || undefined,
         membershipType: formData.membershipType
       })
 
@@ -289,7 +293,7 @@ export default function AdminMembers() {
   }
 
   const MemberCard = ({ member }: { member: Member }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.memberCard}
       onPress={() => setSelectedMember(member)}
       activeOpacity={0.8}
@@ -435,7 +439,7 @@ export default function AdminMembers() {
           <MaterialIcons name="people-outline" size={64} color={COLORS.textMuted} />
           <Text style={styles.emptyTitle}>Aucun membre trouvé</Text>
           <Text style={styles.emptySubtitle}>
-            {members.length === 0 
+            {members.length === 0
               ? 'Aucun membre enregistré dans la base de données'
               : 'Aucun membre ne correspond à vos critères de recherche'
             }
@@ -532,6 +536,21 @@ export default function AdminMembers() {
                       value={formData.phone}
                       onChangeText={(text) => setFormData({ ...formData, phone: text })}
                       keyboardType="phone-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Mot de passe (Optionnel)</Text>
+                  <View style={styles.inputContainer}>
+                    <MaterialIcons name="lock" size={20} color={COLORS.textSecondary} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Laisser vide pour générer"
+                      placeholderTextColor={COLORS.textMuted}
+                      secureTextEntry
+                      value={formData.password}
+                      onChangeText={(text) => setFormData({ ...formData, password: text })}
                     />
                   </View>
                 </View>
@@ -724,7 +743,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
+
   // Header
   header: {
     padding: 20,

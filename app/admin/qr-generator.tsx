@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   ActivityIndicator
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { generateDailyQRCodes, getTodayQRCodes, DailyQRCode } from '../../services/dailyQR';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { Feather } from '@expo/vector-icons';
@@ -22,6 +24,10 @@ const QRGeneratorScreen: React.FC = () => {
   const [todayQRCodes, setTodayQRCodes] = useState<DailyQRCode | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Références pour la capture des QRCode en image
+  const entryQRRef = useRef<any>(null);
+  const exitQRRef = useRef<any>(null);
 
   useEffect(() => {
     loadTodayQRCodes();
@@ -42,7 +48,7 @@ const QRGeneratorScreen: React.FC = () => {
   const handleGenerateQRCodes = async () => {
     try {
       setIsGenerating(true);
-      
+
       Alert.alert(
         '🔄 Générer les codes QR du jour',
         'Créer de nouveaux codes QR pour aujourd\'hui ?',
@@ -94,16 +100,59 @@ const QRGeneratorScreen: React.FC = () => {
 
   const handleShareQRCode = async (codeType: 'entry' | 'exit', qrCode: string) => {
     try {
-      const message = codeType === 'entry' 
+      const message = codeType === 'entry'
         ? `🚪 Code QR ENTRÉE - ${new Date().toLocaleDateString('fr-FR')}\n\n${qrCode}`
         : `🚶‍♂️ Code QR SORTIE - ${new Date().toLocaleDateString('fr-FR')}\n\n${qrCode}`;
-        
+
       await Share.share({
         message,
         title: `Code QR ${codeType === 'entry' ? 'Entrée' : 'Sortie'}`
       });
     } catch (error) {
       console.error('Erreur partage:', error);
+    }
+  };
+
+  const handleDownloadQRCode = async (ref: any, codeType: 'entry' | 'exit') => {
+    if (!ref.current) {
+      Alert.alert('Erreur', 'Le QR code n\'est pas encore prêt. Veuillez patienter.');
+      return;
+    }
+
+    try {
+      ref.current.toDataURL(async (data: string) => {
+        try {
+          // Nettoyer la chaîne Base64 (au cas où "data:image/png;base64," est inclus)
+          const base64Code = data.replace('data:image/png;base64,', '');
+
+          const dateStr = new Date().toISOString().split('T')[0];
+          const filename = `GymQR_${codeType}_${dateStr}.png`;
+          const filepath = `${FileSystem.documentDirectory}${filename}`;
+
+          // Enregistrer le Base64 en fichier physique
+          await FileSystem.writeAsStringAsync(filepath, base64Code, {
+            encoding: 'base64', // Utilisé en dur pour éviter l'erreur "Cannot read property 'Base64'"
+          });
+
+          // Proposer au système de sauvegarder
+          const isAvailable = await Sharing.isAvailableAsync();
+          if (isAvailable) {
+            await Sharing.shareAsync(filepath, {
+              mimeType: 'image/png',
+              dialogTitle: `Sauvegarder QR Code ${codeType.toUpperCase()}`,
+              UTI: 'public.png', // pour iOS
+            });
+          } else {
+            Alert.alert('Erreur', 'Le partage ou la sauvegarde ne sont pas disponibles sur cet appareil');
+          }
+        } catch (err: any) {
+          console.error('Erreur écriture fichier:', err);
+          Alert.alert('❌ Erreur Interne', err?.message || 'Impossible de créer le fichier image.');
+        }
+      });
+    } catch (error: any) {
+      console.error('Download error:', error);
+      Alert.alert('❌ Erreur', error?.message || 'Impossible d\'initier le téléchargement.');
     }
   };
 
@@ -141,7 +190,7 @@ const QRGeneratorScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
-          🔄 Générateur de Codes QR
+          Générateur de Codes QR
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {formatDate(new Date().toISOString())}
@@ -205,30 +254,36 @@ const QRGeneratorScreen: React.FC = () => {
               <View style={styles.qrTitleContainer}>
                 <Feather name="log-in" size={24} color="#4CAF50" />
                 <Text style={[styles.qrTitle, { color: colors.text }]}>
-                  🚪 CODE QR ENTRÉE
+                  CODE QR ENTRÉE
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.shareButton}
-                onPress={() => handleShareQRCode('entry', todayQRCodes.entry_code)}
-              >
-                <Feather name="share" size={20} color={colors.primary} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity
+                  style={styles.shareButton}
+                  onPress={() => handleDownloadQRCode(entryQRRef, 'entry')}
+                >
+                  <Feather name="download" size={20} color={colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.shareButton}
+                  onPress={() => handleShareQRCode('entry', todayQRCodes.entry_code)}
+                >
+                  <Feather name="share" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
-            
+
             <View style={styles.qrCodeWrapper}>
               <QRCode
+                getRef={entryQRRef}
                 value={todayQRCodes.entry_code}
                 size={width * 0.6}
                 backgroundColor="white"
                 color="black"
               />
             </View>
-            
+
             <View style={styles.qrInfo}>
-              <Text style={[styles.qrInfoText, { color: colors.textSecondary }]}>
-                Les membres scannent ce code pour ENTRER dans la salle
-              </Text>
               <Text style={[styles.qrCode, { color: colors.textSecondary }]}>
                 {String(todayQRCodes.entry_code)}
               </Text>
@@ -241,30 +296,36 @@ const QRGeneratorScreen: React.FC = () => {
               <View style={styles.qrTitleContainer}>
                 <Feather name="log-out" size={24} color="#FF5722" />
                 <Text style={[styles.qrTitle, { color: colors.text }]}>
-                  🚶‍♂️ CODE QR SORTIE
+                  CODE QR SORTIE
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.shareButton}
-                onPress={() => handleShareQRCode('exit', todayQRCodes.exit_code)}
-              >
-                <Feather name="share" size={20} color={colors.primary} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity
+                  style={styles.shareButton}
+                  onPress={() => handleDownloadQRCode(exitQRRef, 'exit')}
+                >
+                  <Feather name="download" size={20} color={colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.shareButton}
+                  onPress={() => handleShareQRCode('exit', todayQRCodes.exit_code)}
+                >
+                  <Feather name="share" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
-            
+
             <View style={styles.qrCodeWrapper}>
               <QRCode
+                getRef={exitQRRef}
                 value={todayQRCodes.exit_code}
                 size={width * 0.6}
                 backgroundColor="white"
                 color="black"
               />
             </View>
-            
+
             <View style={styles.qrInfo}>
-              <Text style={[styles.qrInfoText, { color: colors.textSecondary }]}>
-                Les membres scannent ce code pour SORTIR de la salle
-              </Text>
               <Text style={[styles.qrCode, { color: colors.textSecondary }]}>
                 {String(todayQRCodes.exit_code)}
               </Text>
@@ -273,36 +334,6 @@ const QRGeneratorScreen: React.FC = () => {
         </>
       )}
 
-      {/* Instructions */}
-      <View style={[styles.instructionsCard, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.instructionsTitle, { color: colors.text }]}>
-          📝 Instructions d'utilisation
-        </Text>
-        <View style={styles.instruction}>
-          <Text style={[styles.instructionStep, { color: colors.primary }]}>1.</Text>
-          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
-            Générez les codes QR quotidiens en cliquant sur le bouton
-          </Text>
-        </View>
-        <View style={styles.instruction}>
-          <Text style={[styles.instructionStep, { color: colors.primary }]}>2.</Text>
-          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
-            Affichez ou partagez les codes QR aux emplacements d'entrée/sortie
-          </Text>
-        </View>
-        <View style={styles.instruction}>
-          <Text style={[styles.instructionStep, { color: colors.primary }]}>3.</Text>
-          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
-            Les membres scannent avec leur téléphone pour s'enregistrer
-          </Text>
-        </View>
-        <View style={styles.instruction}>
-          <Text style={[styles.instructionStep, { color: colors.primary }]}>4.</Text>
-          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
-            Les accès sont automatiquement enregistrés dans le système
-          </Text>
-        </View>
-      </View>
 
       <View style={styles.spacer} />
     </ScrollView>
@@ -426,32 +457,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 10,
   },
-  instructionsCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  instructionsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  instruction: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  instructionStep: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 8,
-    width: 20,
-  },
-  instructionText: {
-    fontSize: 14,
-    flex: 1,
-    lineHeight: 20,
-  },
+
   spacer: {
     height: 40,
   },
