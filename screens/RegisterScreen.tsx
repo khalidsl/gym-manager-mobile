@@ -133,7 +133,7 @@ export default function RegisterScreen({ navigation }: any) {
               placeholder="••••••••"
               value={formData.password}
               onChangeText={(value) => updateField('password', value)}
-              secureTextEntry
+              isPassword
               error={errors.password}
             />
 
@@ -142,7 +142,7 @@ export default function RegisterScreen({ navigation }: any) {
               placeholder="••••••••"
               value={formData.confirmPassword}
               onChangeText={(value) => updateField('confirmPassword', value)}
-              secureTextEntry
+              isPassword
               error={errors.confirmPassword}
             />
 

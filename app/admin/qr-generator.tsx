@@ -275,7 +275,7 @@ const QRGeneratorScreen: React.FC = () => {
 
             <View style={styles.qrCodeWrapper}>
               <QRCode
-                getRef={entryQRRef}
+                getRef={(c) => (entryQRRef.current = c)}
                 value={todayQRCodes.entry_code}
                 size={width * 0.6}
                 backgroundColor="white"
@@ -317,7 +317,7 @@ const QRGeneratorScreen: React.FC = () => {
 
             <View style={styles.qrCodeWrapper}>
               <QRCode
-                getRef={exitQRRef}
+                getRef={(c) => (exitQRRef.current = c)}
                 value={todayQRCodes.exit_code}
                 size={width * 0.6}
                 backgroundColor="white"

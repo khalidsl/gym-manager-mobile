@@ -16,7 +16,7 @@ import { useAuthStore } from '../store/authStore'
 
 export default function LoginScreen({ navigation }: any) {
   const { signIn, loading } = useAuthStore()
-  
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
@@ -62,50 +62,50 @@ export default function LoginScreen({ navigation }: any) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>Gym Manager</Text>
-          <Text style={styles.subtitle}>Connectez-vous à votre compte</Text>
-        </View>
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Gym Manager</Text>
+            <Text style={styles.subtitle}>Connectez-vous à votre compte</Text>
+          </View>
 
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            placeholder="votre@email.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={errors.email}
-          />
+          <View style={styles.form}>
+            <Input
+              label="Email"
+              placeholder="votre@email.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={errors.email}
+            />
 
-          <Input
-            label="Mot de passe"
-            placeholder="••••••••"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            error={errors.password}
-          />
+            <Input
+              label="Mot de passe"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={setPassword}
+              isPassword
+              error={errors.password}
+            />
 
-          <Button
-            title="Se connecter"
-            onPress={handleLogin}
-            loading={loading}
-            fullWidth
-            style={styles.loginButton}
-          />
+            <Button
+              title="Se connecter"
+              onPress={handleLogin}
+              loading={loading}
+              fullWidth
+              style={styles.loginButton}
+            />
 
-          <Button
-            title="Créer un compte"
-            onPress={() => navigation.navigate('Register')}
-            variant="ghost"
-            fullWidth
-          />
-        </View>
-      </ScrollView>
+            <Button
+              title="Créer un compte"
+              onPress={() => navigation.navigate('Register')}
+              variant="ghost"
+              fullWidth
+            />
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
   )

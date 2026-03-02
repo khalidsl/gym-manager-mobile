@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { TextInput, View, Text, StyleSheet, TextInputProps, ViewStyle, TextStyle } from 'react-native'
+import { TextInput, View, Text, StyleSheet, TextInputProps, ViewStyle, TextStyle, TouchableOpacity } from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
 import { Colors, Spacing, BorderRadius, FontSize } from '../constants/Colors'
 
 interface InputProps extends TextInputProps {
@@ -7,6 +8,7 @@ interface InputProps extends TextInputProps {
   error?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  isPassword?: boolean
   containerStyle?: ViewStyle
   inputStyle?: TextStyle
 }
@@ -16,16 +18,40 @@ export const Input: React.FC<InputProps> = ({
   error,
   leftIcon,
   rightIcon,
+  isPassword,
   containerStyle,
   inputStyle,
   ...textInputProps
 }) => {
   const [isFocused, setIsFocused] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword)
+  }
+
+  const renderRightIcon = () => {
+    if (isPassword) {
+      return (
+        <TouchableOpacity onPress={togglePasswordVisibility} activeOpacity={0.7}>
+          <MaterialIcons
+            name={showPassword ? "visibility" : "visibility-off"}
+            size={24}
+            color={Colors.light.textSecondary || '#94A3B8'}
+          />
+        </TouchableOpacity>
+      )
+    }
+    if (rightIcon) {
+      return rightIcon
+    }
+    return null
+  }
 
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      
+
       <View
         style={[
           styles.inputContainer,
@@ -34,18 +60,19 @@ export const Input: React.FC<InputProps> = ({
         ]}
       >
         {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
-        
+
         <TextInput
           style={[styles.input, inputStyle]}
-          placeholderTextColor={Colors.light.placeholder}
+          placeholderTextColor={Colors.light.placeholder || '#94A3B8'}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          secureTextEntry={isPassword ? !showPassword : textInputProps.secureTextEntry}
           {...textInputProps}
         />
-        
-        {rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
+
+        {renderRightIcon() && <View style={styles.iconRight}>{renderRightIcon()}</View>}
       </View>
-      
+
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
   )
